@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cânticos - Santa Dulce</title>
+    <style>
+        :root { --blue: #0056b3; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); }
+        header { background: var(--blue); color: white; padding: 2rem; text-align: center; }
+        .container { max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        .search-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+        input { padding: 12px; border: 1px solid #ddd; border-radius: 4px; flex: 1; min-width: 200px; font-size: 16px; }
+        
+        /* Ajuste no card para parecer um botão clicável */
+        .item-link { text-decoration: none; color: inherit; display: block; margin-bottom: 12px; }
+        .item { 
+            background: white; 
+            padding: 18px; 
+            border-radius: 8px; 
+            border-left: 6px solid var(--blue); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+            transition: transform 0.2s;
+        }
+        .item:active { transform: scale(0.98); } /* Efeito de clique no celular */
+        
+        .btn-view { color: var(--blue); font-weight: bold; font-size: 14px; text-transform: uppercase; }
+        .date-badge { color: #666; font-size: 13px; display: block; margin-top: 4px; }
+        #loading { text-align: center; color: #666; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Cânticos - Santa Dulce dos Pobres</h1>
+    <p>Toque na missa para abrir o cântico</p>
+</header>
+
+<div class="container">
+    <div class="search-box">
+        <input type="date" id="dateFilter" onchange="filterFiles()">
+        <input type="text" id="textFilter" placeholder="Buscar por nome da celebração..." onkeyup="filterFiles()">
+    </div>
+
+    <div id="loading">Buscando arquivos na nuvem...</div>
+    <div id="fileList"></div>
+</div>
+
+<script>
+    // === CONFIGURAÇÃO (AJUSTE COM SEUS DADOS) ===
+    const GITHUB_USER = 'grupodecantostadulce-lang'; 
+    const REPO_NAME = 'cânticos';
+    const FOLDER_PATH = 'arquivos'; 
+
+    let allFiles = [];
+
+    async function fetchFiles() {
+        const url = `https://api.github.com/repos/${GITHUB_USER}/${REPO_NAME}/contents/${FOLDER_PATH}`;
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            if (!Array.isArray(data)) throw new Error();
+
+            allFiles = data.map(file => {
+                const parts = file.name.split('_');
+                const date = parts[0]; 
+                const title = parts[1] ? parts[1].replace(/-/g, ' ').split('.')[0] : file.name;
+                
+                // LINK RAW ORIGINAL
+                const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${REPO_NAME}/main/${FOLDER_PATH}/${file.name}`;
+                
+                // USANDO O VISUALIZADOR DO GOOGLE PARA FORÇAR A ABERTURA EM VEZ DE DOWNLOAD
+                const viewUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}&embedded=true`;
+
+                return { name: file.name, url: viewUrl, date: date, title: title };
+            }).reverse();
+
+            document.getElementById('loading').style.display = 'none';
+            renderFiles(allFiles);
+        } catch (e) {
+            document.getElementById('loading').innerText = "Erro ao carregar arquivos.";
+        }
+    }
+
+    function renderFiles(files) {
+        const listDiv = document.getElementById('fileList');
+        listDiv.innerHTML = '';
+
+        files.forEach(file => {
+            const formattedDate = file.date.includes('-') ? file.date.split('-').reverse().join('/') : "Data s/ ref";
+            
+            const anchor = document.createElement('a');
+            anchor.className = 'item-link';
+            anchor.href = file.url; // Agora aponta para o visualizador do Google
+            anchor.target = '_blank'; 
+            anchor.rel = 'noopener noreferrer';
+
+            anchor.innerHTML = `
+                <div class="item">
+                    <div>
+                        <strong>${file.title}</strong>
+                        <span class="date-badge">📅 ${formattedDate}</span>
+                    </div>
+                    <span class="btn-view">Visualizar ➔</span>
+                </div>
+            `;
+            listDiv.appendChild(anchor);
+        });
+    }
+
+    function filterFiles() {
+        const dateVal = document.getElementById('dateFilter').value;
+        const textVal = document.getElementById('textFilter').value.toLowerCase();
+        const filtered = allFiles.filter(f => (dateVal ? f.date === dateVal : true) && f.title.toLowerCase().includes(textVal));
+        renderFiles(filtered);
+    }
+
+    fetchFiles();
+</script>
