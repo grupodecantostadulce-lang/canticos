@@ -5,118 +5,185 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cânticos - Santa Dulce</title>
     <style>
-        :root { --blue: #0056b3; --bg: #f4f7f6; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); }
-        header { background: var(--blue); color: white; padding: 2rem; text-align: center; }
+        :root { --blue: #0056b3; --bg: #f4f7f6; --text: #333; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+        header { background: var(--blue); color: white; padding: 2rem 1rem; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        
         .container { max-width: 800px; margin: 20px auto; padding: 0 20px; }
-        .search-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
-        input { padding: 12px; border: 1px solid #ddd; border-radius: 4px; flex: 1; min-width: 200px; font-size: 16px; }
         
-        /* Ajuste no card para parecer um botão clicável */
-        .item-link { text-decoration: none; color: inherit; display: block; margin-bottom: 12px; }
-        .item { 
-            background: white; 
-            padding: 18px; 
-            border-radius: 8px; 
-            border-left: 6px solid var(--blue); 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-            transition: transform 0.2s;
+        /* Estilo dos Filtros */
+        .filter-container { 
+            background: white; padding: 20px; border-radius: 12px; 
+            margin-bottom: 25px; display: flex; gap: 10px; flex-wrap: wrap;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
-        .item:active { transform: scale(0.98); } /* Efeito de clique no celular */
+        select, input { 
+            padding: 12px; border: 1px solid #ddd; border-radius: 8px; 
+            flex: 1; min-width: 140px; font-size: 16px; outline: none;
+        }
+        select:focus { border-color: var(--blue); }
+
+        /* Estilo dos Meses e Cards */
+        .month-group { margin-top: 30px; }
+        .month-title { 
+            color: var(--blue); border-bottom: 2px solid var(--blue); 
+            padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase;
+            font-size: 1.2rem; letter-spacing: 1px;
+        }
         
-        .btn-view { color: var(--blue); font-weight: bold; font-size: 14px; text-transform: uppercase; }
-        .date-badge { color: #666; font-size: 13px; display: block; margin-top: 4px; }
-        #loading { text-align: center; color: #666; margin-top: 20px; }
+        .item-link { text-decoration: none; color: inherit; display: block; margin-bottom: 10px; }
+        .item { 
+            background: white; padding: 16px; border-radius: 8px; 
+            border-left: 5px solid #00c853; /* Verde para indicar arquivo */
+            display: flex; justify-content: space-between; align-items: center; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s;
+        }
+        .item:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        
+        .btn-view { color: var(--blue); font-weight: bold; font-size: 14px; }
+        .date-badge { color: #777; font-size: 13px; display: block; margin-top: 4px; }
+        
+        #loading { text-align: center; padding: 40px; color: #666; font-style: italic; }
+        #no-results { text-align: center; padding: 40px; color: #999; display: none; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>Cânticos - Santa Dulce dos Pobres</h1>
-    <p>Toque na missa para abrir o cântico</p>
+    <img src="imagens/pastoral música.png" alt="">
+    <img src="imagens/stadulce preview.png" alt="">
+    <h1>Cânticos - Sta. Dulce dos Pobres</h1>
+    <p>Selecione o ano e mês para ver o repertório</p>
 </header>
 
 <div class="container">
-    <div class="search-box">
-        <input type="date" id="dateFilter" onchange="filterFiles()">
-        <input type="text" id="textFilter" placeholder="Buscar por nome da celebração..." onkeyup="filterFiles()">
+    <div class="filter-container">
+        <select id="yearFilter" onchange="filterAndRender()">
+            <option value="">Todos os Anos</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+        </select>
+
+        <select id="monthFilter" onchange="filterAndRender()">
+            <option value="">Todos os Meses</option>
+            <option value="01">Janeiro</option>
+            <option value="02">Fevereiro</option>
+            <option value="03">Março</option>
+            <option value="04">Abril</option>
+            <option value="05">Maio</option>
+            <option value="06">Junho</option>
+            <option value="07">Julho</option>
+            <option value="08">Agosto</option>
+            <option value="09">Setembro</option>
+            <option value="10">Outubro</option>
+            <option value="11">Novembro</option>
+            <option value="12">Dezembro</option>
+        </select>
     </div>
 
-    <div id="loading">Buscando arquivos na nuvem...</div>
+    <div id="loading">Buscando documentos na nuvem...</div>
+    <div id="no-results">Nenhum cântico encontrado para este período.</div>
     <div id="fileList"></div>
 </div>
 
 <script>
     // === CONFIGURAÇÃO (AJUSTE COM SEUS DADOS) ===
     const GITHUB_USER = 'grupodecantostadulce-lang'; 
-    const REPO_NAME = 'cânticos';
+    const REPO_NAME = 'canticos';
     const FOLDER_PATH = 'arquivos'; 
 
     let allFiles = [];
+    const monthNames = {
+        "01": "Janeiro", "02": "Fevereiro", "03": "Março", "04": "Abril",
+        "05": "Maio", "06": "Junho", "07": "Julho", "08": "Agosto",
+        "09": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro"
+    };
 
     async function fetchFiles() {
         const url = `https://api.github.com/repos/${GITHUB_USER}/${REPO_NAME}/contents/${FOLDER_PATH}`;
         try {
             const response = await fetch(url);
             const data = await response.json();
-            if (!Array.isArray(data)) throw new Error();
-
+            
             allFiles = data.map(file => {
-                const parts = file.name.split('_');
-                const date = parts[0]; 
-                const title = parts[1] ? parts[1].replace(/-/g, ' ').split('.')[0] : file.name;
+                const parts = file.name.split('_'); // Espera: 2025-01-20_Nome.pdf
+                const fullDate = parts[0]; 
+                const dateParts = fullDate.split('-');
                 
-                // LINK RAW ORIGINAL
-                const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${REPO_NAME}/main/${FOLDER_PATH}/${file.name}`;
-                
-                // USANDO O VISUALIZADOR DO GOOGLE PARA FORÇAR A ABERTURA EM VEZ DE DOWNLOAD
-                const viewUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}&embedded=true`;
-
-                return { name: file.name, url: viewUrl, date: date, title: title };
-            }).reverse();
+                return {
+                    name: file.name,
+                    rawUrl: `https://raw.githubusercontent.com/${GITHUB_USER}/${REPO_NAME}/main/${FOLDER_PATH}/${file.name}`,
+                    year: dateParts[0],
+                    month: dateParts[1],
+                    day: dateParts[2],
+                    title: parts[1] ? parts[1].replace(/-/g, ' ').split('.')[0] : file.name
+                };
+            }).sort((a, b) => b.name.localeCompare(a.name)); // Ordena do mais recente para o mais antigo
 
             document.getElementById('loading').style.display = 'none';
-            renderFiles(allFiles);
+            filterAndRender();
         } catch (e) {
-            document.getElementById('loading').innerText = "Erro ao carregar arquivos.";
+            document.getElementById('loading').innerText = "Erro ao carregar arquivos do GitHub.";
         }
     }
 
-    function renderFiles(files) {
+    function filterAndRender() {
+        const selYear = document.getElementById('yearFilter').value;
+        const selMonth = document.getElementById('monthFilter').value;
         const listDiv = document.getElementById('fileList');
+        const noResults = document.getElementById('no-results');
+        
         listDiv.innerHTML = '';
 
-        files.forEach(file => {
-            const formattedDate = file.date.includes('-') ? file.date.split('-').reverse().join('/') : "Data s/ ref";
+        // Filtra os arquivos
+        const filtered = allFiles.filter(f => {
+            const matchYear = selYear ? f.year === selYear : true;
+            const matchMonth = selMonth ? f.month === selMonth : true;
+            return matchYear && matchMonth;
+        });
+
+        if (filtered.length === 0) {
+            noResults.style.display = 'block';
+            return;
+        }
+        noResults.style.display = 'none';
+
+        // Lógica de agrupamento por mês
+        let currentMonth = "";
+
+        filtered.forEach(file => {
+            // Se o mês mudar, cria um novo cabeçalho de título de mês
+            if (file.month !== currentMonth) {
+                currentMonth = file.month;
+                const monthHead = document.createElement('div');
+                monthHead.className = 'month-group';
+                monthHead.innerHTML = `<h2 class="month-title">${monthNames[file.month] || 'Outros'} ${file.year}</h2>`;
+                listDiv.appendChild(monthHead);
+            }
+
+            const viewUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(file.rawUrl)}&embedded=true`;
             
             const anchor = document.createElement('a');
             anchor.className = 'item-link';
-            anchor.href = file.url; // Agora aponta para o visualizador do Google
-            anchor.target = '_blank'; 
-            anchor.rel = 'noopener noreferrer';
+            anchor.href = viewUrl;
+            anchor.target = '_blank';
 
             anchor.innerHTML = `
                 <div class="item">
                     <div>
                         <strong>${file.title}</strong>
-                        <span class="date-badge">📅 ${formattedDate}</span>
+                        <span class="date-badge">📅 ${file.day}/${file.month}/${file.year}</span>
                     </div>
-                    <span class="btn-view">Visualizar ➔</span>
+                    <span class="btn-view">VER ➔</span>
                 </div>
             `;
             listDiv.appendChild(anchor);
         });
     }
 
-    function filterFiles() {
-        const dateVal = document.getElementById('dateFilter').value;
-        const textVal = document.getElementById('textFilter').value.toLowerCase();
-        const filtered = allFiles.filter(f => (dateVal ? f.date === dateVal : true) && f.title.toLowerCase().includes(textVal));
-        renderFiles(filtered);
-    }
-
     fetchFiles();
 </script>
+
+</body>
+</html>
