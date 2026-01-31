@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cânticos - Santa Dulce</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+    <div class="header-content">
+        <img src="imagens/pastoral música.png" class="header-logo" alt="Pastoral da Música">
+        
+        <div class="header-text">
+            <h1>Área Missionária Santa Dulce dos Pobres</h1>
+            <p>Portal da Pastoral da Música</p>
+            <h2>CIFRAS EM FORMATO TEXTO - MISSAS</h2>
+        </div>
+        <img src="imagens/stadulce preview.png" class="header-logo" alt="Santa Dulce">
+    </div>
+</header>
+
+<div class="nav-container">
+    <nav class="menu-horizontal">
+        <a href="index.html" class="nav-link"><span>📄</span> INICIO</a>
+        <a href="cifra.html" class="nav-link"><span>🎸</span> CIFRAS PDF</a>
+        <a href="letras.html" class="nav-link"><span>🎶</span> LETRAS TEXTO</a>
+        <a href="diversos.html" class="nav-link"><span>🎤</span> CÂNTICOS DIVERSOS</a>
+    </nav>
+</div>
+
+<div class="container">
+    <div class="filter-container">
+        <p>Selecione o ano e mês para ver o repertório</p>  
+        <select id="yearFilter" onchange="filterAndRender()">
+            <option value="">Todos os Anos</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+        </select>
+
+        <select id="monthFilter" onchange="filterAndRender()">
+            <option value="">Todos os Meses</option>
+            <option value="01">Janeiro</option>
+            <option value="02">Fevereiro</option>
+            <option value="03">Março</option>
+            <option value="04">Abril</option>
+            <option value="05">Maio</option>
+            <option value="06">Junho</option>
+            <option value="07">Julho</option>
+            <option value="08">Agosto</option>
+            <option value="09">Setembro</option>
+            <option value="10">Outubro</option>
+            <option value="11">Novembro</option>
+            <option value="12">Dezembro</option>
+        </select>
+    </div>
+
+    <div id="loading">Buscando documentos na nuvem...</div>
+    <div id="no-results">Nenhum cântico encontrado para este período.</div>
+    <div id="fileList"></div>
+</div>
+
+<footer>
+    <strong>Área Missionária Santa Dulce dos Pobres</strong>
+    <div class="footer-info">
+        Pastoral da Música<br>
+        © 2026 - Todos os arquivos são para uso celebrativo.
+    </div>
+</footer>
+
+<script>
+    // === CONFIGURAÇÃO ===
+    const GITHUB_USER = 'grupodecantostadulce-lang'; 
+    const REPO_NAME = 'canticos';
+    const FOLDER_PATH = 'cifrastexto'; 
+
+    let allFiles = [];
+    const monthNames = {
+        "01": "Janeiro", "02": "Fevereiro", "03": "Março", "04": "Abril",
+        "05": "Maio", "06": "Junho", "07": "Julho", "08": "Agosto",
+        "09": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro"
+    };
+
+    async function fetchFiles() {
+        const url = `https://api.github.com/repos/${GITHUB_USER}/${REPO_NAME}/contents/${FOLDER_PATH}`;
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            // Verificação básica para evitar erro se a pasta estiver vazia
+            if(!Array.isArray(data)) throw new Error("Não foi possível listar os arquivos.");
+
+            allFiles = data.map(file => {
+                const parts = file.name.split('_'); 
+                const fullDate = parts[0] || ""; 
+                const dateParts = fullDate.split('-');
+                
+                return {
+                    name: file.name,
+                    // URL direta para o arquivo (Download)
+                    rawUrl: `https://raw.githubusercontent.com/${GITHUB_USER}/${REPO_NAME}/main/${FOLDER_PATH}/${file.name}`,
+                    year: dateParts[0] || "2025",
+                    month: dateParts[1] || "01",
+                    day: dateParts[2] || "01",
+                    title: parts[1] ? parts[1].replace(/-/g, ' ').split('.')[0] : file.name
+                };
+            }).sort((a, b) => b.name.localeCompare(a.name));
+
+            document.getElementById('loading').style.display = 'none';
+            filterAndRender();
+        } catch (e) {
+            document.getElementById('loading').innerText = "Erro ao carregar arquivos do GitHub.";
+        }
+    }
+
+    function filterAndRender() {
+        const selYear = document.getElementById('yearFilter').value;
+        const selMonth = document.getElementById('monthFilter').value;
+        const listDiv = document.getElementById('fileList');
+        const noResults = document.getElementById('no-results');
+        
+        listDiv.innerHTML = '';
+
+        const filtered = allFiles.filter(f => {
+            const matchYear = selYear ? f.year === selYear : true;
+            const matchMonth = selMonth ? f.month === selMonth : true;
+            return matchYear && matchMonth;
+        });
+
+        if (filtered.length === 0) {
+            noResults.style.display = 'block';
+            return;
+        }
+        noResults.style.display = 'none';
+
+        let currentMonth = "";
+
+        filtered.forEach(file => {
+            if (file.month !== currentMonth) {
+                currentMonth = file.month;
+                const monthHead = document.createElement('div');
+                monthHead.className = 'month-group';
+                monthHead.innerHTML = `<h2 class="month-title">${monthNames[file.month] || 'Outros'} ${file.year}</h2>`;
+                listDiv.appendChild(monthHead);
+            }
+
+            // URL para o Visualizador do Google
+            const viewUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(file.rawUrl)}&embedded=true`;
+            
+            // Criamos um elemento DIV em vez de <a> para conter os botões internos
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'item';
+            itemDiv.innerHTML = `
+                <div>
+                    <strong>${file.title}</strong><br>
+                    <span class="date-badge">📅 ${file.day}/${file.month}/${file.year}</span>
+                </div>
+                <div class="item-actions">
+                    <a href="${viewUrl}" target="_blank" class="btn-action btn-view">VISUALIZAR</a>
+                    <a href="${file.rawUrl}" download="${file.name}" target="_blank" class="btn-action btn-download">BAIXAR ⬇</a>
+                </div>
+            `;
+            listDiv.appendChild(itemDiv);
+        });
+    }
+
+    fetchFiles();
+</script>
+</body>
+</html>
