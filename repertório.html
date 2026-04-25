@@ -40,7 +40,7 @@
         .btn-pdf { background: #c0392b; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
         .btn-tom { background: #34495e; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; }
         
-
+        #container-video { display: none; position: fixed; top: 20px; right: 20px; width: 280px; height: 160px; background: #000; border-radius: 8px; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
         #modal-cadastro { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:200; }
         .modal-content { background:white; padding:25px; border-radius:10px; width:450px; display:flex; flex-direction:column; gap:10px; }
 
@@ -155,7 +155,10 @@
     </div>
 </div>
 
-
+<div id="container-video">
+    <button onclick="fecharPlayer()" style="position:absolute; right:5px; top:5px; z-index:110; cursor:pointer;">✕</button>
+    <div id="player-iframe-container"></div>
+</div>
 
 <div id="modal-cadastro">
     <div class="modal-content">
@@ -386,9 +389,10 @@
     }
 
     function carregarPlayer(id) {
-        window.open(`https://www.youtube.com/watch?v=${id}`, '_blank');
+        document.getElementById('container-video').style.display = 'block';
+        document.getElementById('player-iframe-container').innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1" allow="autoplay; fullscreen" width="280" height="160" frameborder="0"></iframe>`;
     }
-    function fecharPlayer() { /* mantido por compatibilidade */ }
+    function fecharPlayer() { document.getElementById('container-video').style.display = 'none'; document.getElementById('player-iframe-container').innerHTML = ''; }
     function fecharModal() { document.getElementById('modal-cadastro').style.display = 'none'; }
     function abrirModal(edit = false, id = '') {
         document.getElementById('modal-cadastro').style.display = 'flex';
