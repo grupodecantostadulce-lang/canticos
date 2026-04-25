@@ -41,6 +41,7 @@
         .btn-tom { background: #34495e; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; }
         
         #container-video { display: none; position: fixed; top: 20px; right: 20px; width: 280px; height: 160px; background: #000; border-radius: 8px; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
+        #container-video { display: none; position: fixed; top: 20px; right: 20px; width: 280px; height: 160px; background: #000; border-radius: 8px; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
         #modal-cadastro { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:200; }
         .modal-content { background:white; padding:25px; border-radius:10px; width:450px; display:flex; flex-direction:column; gap:10px; }
 
@@ -160,6 +161,11 @@
     <div id="player-iframe-container"></div>
 </div>
 
+<div id="container-video">
+    <button onclick="fecharPlayer()" style="position:absolute; right:5px; top:5px; z-index:110; cursor:pointer;">✕</button>
+    <div id="player-iframe-container"></div>
+</div>
+
 <div id="modal-cadastro">
     <div class="modal-content">
         <h3>Dados do Cântico</h3>
@@ -269,34 +275,85 @@
         alert("Agenda salva!");
     }
 
+    // Conta linhas reais do HTML da cifra (ignora tags)
+    function contarLinhasCifra(htmlCifra) {
+        const temp = document.createElement('div');
+        temp.innerHTML = htmlCifra;
+        return (temp.innerText || temp.textContent).split('\n').filter(l => l.trim() !== '').length;
+    }
+
+    // Divide a cifra HTML ao meio preservando as tags <span class="acorde">
+    function dividirCifraEmDuasColunas(htmlCifra) {
+        const linhasHtml = htmlCifra.split('\n');
+        // Contar linhas reais (não vazias)
+        const linhasReais = linhasHtml.filter(l => l.replace(/<[^>]+>/g, '').trim() !== '');
+        const metade = Math.ceil(linhasReais.length / 2);
+
+        let contReal = 0;
+        let coluna1 = [], coluna2 = [];
+        for (const linha of linhasHtml) {
+            const semTag = linha.replace(/<[^>]+>/g, '').trim();
+            if (semTag !== '') contReal++;
+            if (contReal <= metade) coluna1.push(linha);
+            else coluna2.push(linha);
+        }
+        return [coluna1.join('\n'), coluna2.join('\n')];
+    }
+
     function gerarPDF() {
         const dataVal = document.getElementById('data-selecionada').value;
         if(repertorioAtual.length === 0) return alert("Adicione músicas!");
+
+        // Cânticos com mais de 35 linhas recebem layout de 2 colunas
+        const LIMIAR_LINHAS = 35;
 
         const displayData = document.getElementById('dia-semana-display').innerText;
         const elementoPdf = document.createElement('div');
         elementoPdf.style.padding = "10px";
 
         elementoPdf.innerHTML = `
-            <div style="border-bottom: 1px solid #000; margin-bottom: 15px; padding-bottom: 5px;">
+            <div style="border-bottom: 2px solid #000; margin-bottom: 15px; padding-bottom: 5px;">
                 <p style="margin:0; font-size: 14px; font-weight: bold; font-family: sans-serif;">Repertório: ${displayData}</p>
             </div>`;
 
         repertorioAtual.forEach((m, index) => {
+            const numLinhas = contarLinhasCifra(m.htmlCifra);
+            const isLongo = numLinhas > LIMIAR_LINHAS;
+
+            let conteudoCifra;
+            if (isLongo) {
+                const [col1, col2] = dividirCifraEmDuasColunas(m.htmlCifra);
+                conteudoCifra = `
+                    <div style="display:table; width:100%; table-layout:fixed; margin-top:10px; border-top:0.5px solid #eee; padding-top:8px;">
+                        <div style="display:table-cell; width:50%; vertical-align:top; padding-right:10px; border-right:1px dashed #ccc;">
+                            <div style="white-space:pre; font-family:Consolas,monospace; font-size:11.5px; line-height:1.3;">${col1}</div>
+                        </div>
+                        <div style="display:table-cell; width:50%; vertical-align:top; padding-left:10px;">
+                            <div style="white-space:pre; font-family:Consolas,monospace; font-size:11.5px; line-height:1.3;">${col2}</div>
+                        </div>
+                    </div>`;
+            } else {
+                conteudoCifra = `
+                    <div style="white-space:pre; font-family:Consolas,monospace; font-size:13px; line-height:1.3; margin-top:10px; border-top:0.5px solid #eee; padding-top:10px;">${m.htmlCifra}</div>`;
+            }
+
+            const ehUltimo = index === repertorioAtual.length - 1;
             elementoPdf.innerHTML += `
-                <div style="page-break-after: always; margin-bottom: 10px;">
-                    <h2 style="font-family: sans-serif; font-size: 18px; margin: 0;">${index + 1}. ${m.nome}</h2>
-                    ${m.link ? `<p style="margin: 2px 0; font-size: 10px; color: #3498db; font-family: sans-serif;">Áudio: ${m.link}</p>` : ''}
-                    <div style="white-space:pre; font-family: Consolas, monospace; font-size: 13px; line-height: 1.3; margin-top: 10px; border-top: 0.5px solid #eee; padding-top: 10px;">${m.htmlCifra}</div>
-                </div>
-            `;
+                <div style="${ehUltimo ? '' : 'page-break-after:always;'} margin-bottom:10px;">
+                    <h2 style="font-family:sans-serif; font-size:16px; margin:0 0 2px 0;">
+                        ${index + 1}. ${m.nome}
+                        ${isLongo ? '<span style="font-size:10px; color:#888; font-weight:normal;"> — 2 colunas</span>' : ''}
+                    </h2>
+                    ${m.link ? `<p style="margin:2px 0; font-size:10px; color:#3498db; font-family:sans-serif;">Áudio: ${m.link}</p>` : ''}
+                    ${conteudoCifra}
+                </div>`;
         });
 
         const opt = {
             margin: 10,
             filename: `Repertorio_${dataVal}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
+            html2canvas: { scale: 2, useCORS: true },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
