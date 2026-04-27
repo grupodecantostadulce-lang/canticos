@@ -151,55 +151,58 @@
 
     // --- PDF COM CIFRAS (CORRIGIDO ALINHAMENTO) ---
     function gerarPDF() {
-    const dataVal = document.getElementById('data-selecionada').value;
-    if (repertorioAtual.length === 0) return alert("Adicione músicas!");
+        const dataVal = document.getElementById('data-selecionada').value;
+        if (repertorioAtual.length === 0) return alert("Adicione músicas!");
 
-    const elementoPdf = document.createElement('div');
-    // Fonte Courier para alinhamento e background branco
-    elementoPdf.style.cssText = 'padding: 0; font-family: "Courier New", Courier, monospace; background: white; color: #000;';
-
-    repertorioAtual.forEach((m, index) => {
-        const regexAcordes = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*)(?=\s|$)/g;
+        const displayData = document.getElementById('dia-semana-display').innerText;
+        const elementoPdf = document.createElement('div');
         
-     
-        // Limpeza e aplicação de Negrito + Vermelho
-        let textoFormatado = m.htmlCifra.replace(/<span class="acorde">/g, '').replace(/<\/span>/g, '');
-        textoFormatado = textoFormatado.replace(regexAcordes, '<b style="color: #e74c3c;">$1</b>');
+        // Estilo base do documento
+        elementoPdf.style.cssText = 'padding: 0; font-family: "Courier New", Courier, monospace; background: white; color: #000;';
 
-        // Criamos um bloco para cada música
-        // height: 260mm é quase o total de uma folha A4 (297mm) descontando margens.
-        // Isso força o texto a "dobrar" para a segunda coluna ao chegar no fim.
-        elementoPdf.innerHTML += `
-            <div style="page-break-after: always; padding: 10mm; box-sizing: border-box;">
-                <h2 style="font-family: Arial; margin: 0 0 10px 0; border-bottom: 1px solid #000; padding-bottom: 5px;">
-                    ${index + 1}. ${m.nome}
-                </h2>
-                <div style="
-                    column-count: 2; 
-                    column-gap: 10mm; 
-                    column-fill: auto; 
-                    height: 250mm; 
-                    white-space: pre; 
-                    font-size: 11pt; 
-                    line-height: 1.2;
-                ">${textoFormatado}</div>
-            </div>`;
-    });
+        // Cabeçalho (Igual ao PDF de Letras)
+        let htmlGeral = `
+            <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px; font-family: Arial, sans-serif;">
+                <h1 style="margin:0; font-size:16pt; text-transform:uppercase;">Repertório de Cifras</h1>
+                <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData}</p>
+            </div>
+        `;
 
-    const opt = {
-        margin: 0, // Margem zero aqui porque o padding já está no HTML interno (10mm)
-        filename: `Cifras_Colunas_${dataVal}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-            scale: 2, 
-            letterRendering: true,
-            useCORS: true 
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+        repertorioAtual.forEach((m, index) => {
+            const regexAcordes = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*)(?=\s|$)/g;
+            
+            // Limpeza e aplicação de Negrito + Vermelho para as cifras
+            let textoFormatado = m.htmlCifra.replace(/<span class="acorde">/g, '').replace(/<\/span>/g, '');
+            textoFormatado = textoFormatado.replace(regexAcordes, '<b style="color: #e74c3c;">$1</b>');
 
-    html2pdf().set(opt).from(elementoPdf).save();
-}
+            htmlGeral += `
+                <div style="page-break-after: always; padding: 10mm; box-sizing: border-box;">
+                    <h2 style="font-family: Arial; margin: 0 0 10px 0; border-bottom: 1px solid #000; padding-bottom: 5px;">
+                        ${index + 1}. ${m.nome}
+                    </h2>
+                    <div style="
+                        column-count: 2; 
+                        column-gap: 10mm; 
+                        column-fill: auto; 
+                        height: 240mm; 
+                        white-space: pre; 
+                        font-size: 11pt; 
+                        line-height: 1.2;
+                    ">${textoFormatado}</div>
+                </div>`;
+        });
+
+        elementoPdf.innerHTML = htmlGeral;
+
+        const opt = {
+            margin: 0,
+            filename: `Cifras_Com_Cabecalho_${dataVal}.pdf`,
+            html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(elementoPdf).save();
+    }
 
     // --- PDF SÓ LETRAS (ARIAL 13, MINÚSCULAS, COLUNAS) ---
     function gerarPDFLetras() {
