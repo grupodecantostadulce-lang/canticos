@@ -155,28 +155,29 @@
     if (repertorioAtual.length === 0) return alert("Adicione músicas!");
 
     const elementoPdf = document.createElement('div');
-    // Fonte Courier para manter o alinhamento perfeito das cifras
-    elementoPdf.style.cssText = 'padding:10px; font-family: "Courier New", Courier, monospace; color: #000; background: white;';
+    // Fonte Courier para alinhamento e background branco
+    elementoPdf.style.cssText = 'padding: 0; font-family: "Courier New", Courier, monospace; background: white; color: #000;';
 
     repertorioAtual.forEach((m, index) => {
-        // Regex para identificar acordes e aplicar negrito + vermelho no PDF
         const regexAcordes = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*)(?=\s|$)/g;
         
-        // Limpamos tags antigas e aplicamos a nova formatação para o PDF
+        // Limpeza e aplicação de Negrito + Vermelho
         let textoFormatado = m.htmlCifra.replace(/<span class="acorde">/g, '').replace(/<\/span>/g, '');
-        
-        // Aplicando cor vermelha e negrito nos acordes
         textoFormatado = textoFormatado.replace(regexAcordes, '<b style="color: #e74c3c;">$1</b>');
 
+        // Criamos um bloco para cada música
+        // height: 260mm é quase o total de uma folha A4 (297mm) descontando margens.
+        // Isso força o texto a "dobrar" para a segunda coluna ao chegar no fim.
         elementoPdf.innerHTML += `
-            <div style="page-break-after: always; clear: both;">
-                <h2 style="font-family: Arial; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">
+            <div style="page-break-after: always; padding: 10mm; box-sizing: border-box;">
+                <h2 style="font-family: Arial; margin: 0 0 10px 0; border-bottom: 1px solid #000; padding-bottom: 5px;">
                     ${index + 1}. ${m.nome}
                 </h2>
                 <div style="
                     column-count: 2; 
-                    column-gap: 8mm; 
-                    column-rule: 0.1pt solid #eee;
+                    column-gap: 10mm; 
+                    column-fill: auto; 
+                    height: 250mm; 
                     white-space: pre; 
                     font-size: 11pt; 
                     line-height: 1.2;
@@ -185,8 +186,8 @@
     });
 
     const opt = {
-        margin: [10, 10, 15, 10],
-        filename: `Cifras_Formatadas_${dataVal}.pdf`,
+        margin: 0, // Margem zero aqui porque o padding já está no HTML interno (10mm)
+        filename: `Cifras_Colunas_${dataVal}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
             scale: 2, 
