@@ -206,37 +206,57 @@
     if (repertorioAtual.length === 0) return alert("Adicione músicas ao repertório!");
 
     const displayData = document.getElementById('dia-semana-display').innerText;
-    const elementoPdf = document.createElement('div');
-    
-    // Adicionei um padding-bottom de 10mm para garantir que o texto não encoste no limite da página
-    elementoPdf.style.cssText = 'padding: 0; font-family: Arial, sans-serif; background: white;';
 
-    let html = `
+    const elementoPdf = document.createElement('div');
+    elementoPdf.style.cssText = `
+        padding: 0mm;
+        font-family: Arial, sans-serif;
+        color: #000;
+        background: white;
+    `;
+
+    // Cabeçalho
+    let conteudoHtml = `
         <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px;">
-            <h1 style="font-size:16pt; margin:0;">REPERTÓRIO - ${displayData}</h1>
+            <h1 style="margin:0; font-size:16pt; text-transform:uppercase;">Repertório de Cantos</h1>
+            <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData}</p>
         </div>
+        
         <div style="
-            column-count: 2; 
-            column-gap: 10mm; 
-            column-fill: auto; 
-            padding-bottom: 15mm; 
-        ">`;
+            column-count: 2;
+            column-gap: 10mm;
+            column-rule: 0.1pt solid #eee;
+            text-align: left;
+        ">
+    `;
 
     repertorioAtual.forEach((m, index) => {
-        let letra = extrairSomenteLetra(m.htmlCifra).toLowerCase();
-        html += `
-            <div style="margin-bottom: 15px; display: block; width: 100%;">
-                <strong style="text-transform: capitalize; font-size: 12pt; border-bottom: 0.5px solid #ccc; display: block; margin-bottom: 4px;">
-                    ${index + 1}. ${m.nome.toLowerCase()}
-                </strong>
-                <div style="white-space: pre-wrap; font-size: 13pt; line-height: 1.3;">${letra}</div>
-            </div>`;
+        let letra = extrairSomenteLetra(m.htmlCifra);
+        
+        // Converte para minúscula
+        letra = letra.toLowerCase();
+
+        conteudoHtml += `
+            <div style="margin-bottom: 15px;">
+                <div style="border-bottom: 0.5px solid #ccc; margin-bottom: 4px;">
+                    <strong style="font-size: 12pt; text-transform: capitalize;">
+                        ${index + 1}. ${m.nome.toLowerCase()}
+                    </strong>
+                </div>
+                <div style="
+                    white-space: pre-wrap; 
+                    line-height: 1.3; 
+                    font-size: 13pt;
+                    font-family: Arial, sans-serif;
+                    margin-bottom: 10px;
+                ">${letra}</div>
+            </div>
+        `;
     });
+  // Aumentei a margem inferior para 20mm (segurança total contra cortes)
+    conteudoHtml += `</div>`;
+    elementoPdf.innerHTML = conteudoHtml;
 
-    html += `</div>`;
-    elementoPdf.innerHTML = html;
-
-    // Aumentei a margem inferior para 20mm (segurança total contra cortes)
     const opt = {
         margin: [15, 12, 20, 12], 
         filename: `Letras_${dataVal}.pdf`,
@@ -248,6 +268,7 @@
     html2pdf().set(opt).from(elementoPdf).save();
 }
 
+  
     // --- FUNÇÕES DE INTERFACE ---
     function renderMenu(termo = '') {
         const lista = document.getElementById('lista-musicas');
