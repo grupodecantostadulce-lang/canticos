@@ -151,65 +151,101 @@
 
     // --- PDF COM CIFRAS (CORRIGIDO ALINHAMENTO) ---
     function gerarPDF() {
-        const dataVal = document.getElementById('data-selecionada').value;
-        if (repertorioAtual.length === 0) return alert("Adicione músicas!");
+    const dataVal = document.getElementById('data-selecionada').value;
+    if (repertorioAtual.length === 0) return alert("Adicione músicas!");
 
-        const elementoPdf = document.createElement('div');
-        elementoPdf.style.cssText = 'padding:10px; font-family: "Courier New", Courier, monospace;';
+    const elementoPdf = document.createElement('div');
+    // Fonte Courier para manter o alinhamento perfeito das cifras
+    elementoPdf.style.cssText = 'padding:10px; font-family: "Courier New", Courier, monospace; color: #000; background: white;';
 
-        repertorioAtual.forEach((m, index) => {
-            const cifraPura = m.htmlCifra.replace(/<span class="acorde">/g, '').replace(/<\/span>/g, '');
-            elementoPdf.innerHTML += `
-                <div style="page-break-after:always;">
-                    <h2 style="font-family: Arial; margin-bottom:5px;">${index + 1}. ${m.nome}</h2>
-                    <div style="white-space: pre; font-size: 11pt; line-height: 1.2;">${cifraPura}</div>
-                </div>`;
-        });
+    repertorioAtual.forEach((m, index) => {
+        // Regex para identificar acordes e aplicar negrito + vermelho no PDF
+        const regexAcordes = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*)(?=\s|$)/g;
+        
+        // Limpamos tags antigas e aplicamos a nova formatação para o PDF
+        let textoFormatado = m.htmlCifra.replace(/<span class="acorde">/g, '').replace(/<\/span>/g, '');
+        
+        // Aplicando cor vermelha e negrito nos acordes
+        textoFormatado = textoFormatado.replace(regexAcordes, '<b style="color: #e74c3c;">$1</b>');
 
-        html2pdf().set({
-            margin: 10,
-            filename: `Cifras_${dataVal}.pdf`,
-            html2canvas: { scale: 2, letterRendering: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        }).from(elementoPdf).save();
-    }
+        elementoPdf.innerHTML += `
+            <div style="page-break-after: always; clear: both;">
+                <h2 style="font-family: Arial; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">
+                    ${index + 1}. ${m.nome}
+                </h2>
+                <div style="
+                    column-count: 2; 
+                    column-gap: 8mm; 
+                    column-rule: 0.1pt solid #eee;
+                    white-space: pre; 
+                    font-size: 11pt; 
+                    line-height: 1.2;
+                ">${textoFormatado}</div>
+            </div>`;
+    });
+
+    const opt = {
+        margin: [10, 10, 15, 10],
+        filename: `Cifras_Formatadas_${dataVal}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+            scale: 2, 
+            letterRendering: true,
+            useCORS: true 
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(elementoPdf).save();
+}
 
     // --- PDF SÓ LETRAS (ARIAL 13, MINÚSCULAS, COLUNAS) ---
     function gerarPDFLetras() {
-        const dataVal = document.getElementById('data-selecionada').value;
-        if (repertorioAtual.length === 0) return alert("Adicione músicas!");
+    const dataVal = document.getElementById('data-selecionada').value;
+    if (repertorioAtual.length === 0) return alert("Adicione músicas ao repertório!");
 
-        const displayData = document.getElementById('dia-semana-display').innerText;
-        const elementoPdf = document.createElement('div');
-        elementoPdf.style.cssText = 'padding:0; font-family: Arial, sans-serif;';
+    const displayData = document.getElementById('dia-semana-display').innerText;
+    const elementoPdf = document.createElement('div');
+    
+    // Adicionei um padding-bottom de 10mm para garantir que o texto não encoste no limite da página
+    elementoPdf.style.cssText = 'padding: 0; font-family: Arial, sans-serif; background: white;';
 
-        let html = `
-            <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px;">
-                <h1 style="font-size:16pt;">REPERTÓRIO - ${displayData}</h1>
-            </div>
-            <div style="column-count: 2; column-gap: 10mm;">`;
+    let html = `
+        <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px;">
+            <h1 style="font-size:16pt; margin:0;">REPERTÓRIO - ${displayData}</h1>
+        </div>
+        <div style="
+            column-count: 2; 
+            column-gap: 10mm; 
+            column-fill: auto; 
+            padding-bottom: 15mm; 
+        ">`;
 
-        repertorioAtual.forEach((m, index) => {
-            let letra = extrairSomenteLetra(m.htmlCifra).toLowerCase();
-            html += `
-                <div style="margin-bottom: 15px;">
-                    <strong style="text-transform: capitalize; font-size: 12pt; border-bottom: 0.5px solid #ccc; display: block;">
-                        ${index + 1}. ${m.nome.toLowerCase()}
-                    </strong>
-                    <div style="white-space: pre-wrap; font-size: 13pt; line-height: 1.3; margin-top:5px;">${letra}</div>
-                </div>`;
-        });
+    repertorioAtual.forEach((m, index) => {
+        let letra = extrairSomenteLetra(m.htmlCifra).toLowerCase();
+        html += `
+            <div style="margin-bottom: 15px; display: block; width: 100%;">
+                <strong style="text-transform: capitalize; font-size: 12pt; border-bottom: 0.5px solid #ccc; display: block; margin-bottom: 4px;">
+                    ${index + 1}. ${m.nome.toLowerCase()}
+                </strong>
+                <div style="white-space: pre-wrap; font-size: 13pt; line-height: 1.3;">${letra}</div>
+            </div>`;
+    });
 
-        html += `</div>`;
-        elementoPdf.innerHTML = html;
+    html += `</div>`;
+    elementoPdf.innerHTML = html;
 
-        html2pdf().set({
-            margin: 15,
-            filename: `Letras_${dataVal}.pdf`,
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        }).from(elementoPdf).save();
-    }
+    // Aumentei a margem inferior para 20mm (segurança total contra cortes)
+    const opt = {
+        margin: [15, 12, 20, 12], 
+        filename: `Letras_${dataVal}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(elementoPdf).save();
+}
 
     // --- FUNÇÕES DE INTERFACE ---
     function renderMenu(termo = '') {
