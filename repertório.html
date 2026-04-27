@@ -161,24 +161,7 @@
     repertorioAtual.forEach((m, index) => {
         const regexAcordes = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*)(?=\s|$)/g;
         
-        // Cabeçalho
-    let conteudoHtml = `
-        <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px;">
-            <h1 style="margin:0; font-size:16pt; text-transform:uppercase;">Repertório de Cantos</h1>
-            <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData}</p>
-        </div>
-        
-        <div style="
-            column-count: 2;
-            column-gap: 10mm;
-            column-rule: 0.1pt solid #eee;
-            text-align: left;
-        ">
-    `;
-
-    repertorioAtual.forEach((m, index) => {
-        let letra = extrairSomenteLetra(m.htmlCifra);
-        
+     
         // Limpeza e aplicação de Negrito + Vermelho
         let textoFormatado = m.htmlCifra.replace(/<span class="acorde">/g, '').replace(/<\/span>/g, '');
         textoFormatado = textoFormatado.replace(regexAcordes, '<b style="color: #e74c3c;">$1</b>');
