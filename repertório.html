@@ -154,7 +154,7 @@
         return linhas.filter(l => l.trim() !== '' && !acorPattern.test(l)).join('\n');
     }
 
-    // --- PDF CIFRAS (COM CABEÇALHO, NEGRITO VERMELHO E 2 COLUNAS DINÂMICAS) ---
+       // --- PDF COM CIFRAS (COM LINK CLICÁVEL PARA ÁUDIO) ---
     function gerarPDF() {
         const dataVal = document.getElementById('data-selecionada').value;
         if (repertorioAtual.length === 0) return alert("Adicione músicas!");
@@ -172,44 +172,67 @@
 
         repertorioAtual.forEach((m, index) => {
             const regexAcordes = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*)(?=\s|$)/g;
+            
+            // Recupera o link original do banco de dados para esta música específica
+            const linkAudio = db[m.nome]?.link || "";
+            
             let textoFormatado = m.htmlCifra.replace(/<span class="acorde">/g, '').replace(/<\/span>/g, '');
             textoFormatado = textoFormatado.replace(regexAcordes, '<b style="color: #e74c3c;">$1</b>');
 
             htmlGeral += `
                 <div style="page-break-after: always; padding: 10mm; box-sizing: border-box;">
-                    <h2 style="font-family: Arial; margin: 0 0 10px 0; border-bottom: 1px solid #000; padding-bottom: 5px;">
+                    <h2 style="font-family: Arial; margin: 0 0 5px 0;">
                         ${index + 1}. ${m.nome}
                     </h2>
-                    <div style="column-count: 2; column-gap: 10mm; column-fill: auto; height: 240mm; white-space: pre; font-size: 11pt; line-height: 1.2;">${textoFormatado}</div>
+                    
+                    ${linkAudio ? `
+                    <div style="margin-bottom: 10px; font-family: Arial; font-size: 9pt;">
+                        <span style="color: #666;">Áudio de referência: </span>
+                        <a href="${linkAudio}" target="_blank" style="color: #c0392b; text-decoration: underline; font-weight: bold;">
+                            Clique aqui para ouvir no YouTube
+                        </a>
+                    </div>` : ''}
+
+                    <div style="border-top: 1px solid #000; padding-top: 10px; column-count: 2; column-gap: 10mm; column-fill: auto; height: 230mm; white-space: pre; font-size: 11pt; line-height: 1.2;">${textoFormatado}</div>
                 </div>`;
         });
 
         elementoPdf.innerHTML = htmlGeral;
-        html2pdf().set({ margin: 0, filename: `Cifras_${dataVal}.pdf`, html2canvas: { scale: 2, letterRendering: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(elementoPdf).save();
+
+        const opt = {
+            margin: 0,
+            filename: `Cifras_Interativo_${dataVal}.pdf`,
+            html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(elementoPdf).save();
     }
 
-    // --- PDF LETRAS (ARIAL 13, MINÚSCULAS, CABEÇALHO) ---
+    // --- PDF LETRAS (FONTE MAIÚSCULA E FLUXO CONTÍNUO) ---
     function gerarPDFLetras() {
         const dataVal = document.getElementById('data-selecionada').value;
         if (repertorioAtual.length === 0) return alert("Adicione músicas!");
         const displayData = document.getElementById('dia-semana-display').innerText;
 
         const elementoPdf = document.createElement('div');
-        elementoPdf.style.cssText = 'padding: 0; font-family: Arial, sans-serif; background: white; color: #000;';
+        // Estilo: Arial, Branco, Texto em Maiúsculas
+        elementoPdf.style.cssText = 'padding: 0; font-family: Arial, sans-serif; background: white; color: #000; text-transform: uppercase;';
 
         let html = `
             <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px;">
-                <h1 style="margin:0; font-size:16pt; text-transform:uppercase;">Repertório de Cantos</h1>
-                <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData}</p>
+                <h1 style="margin:0; font-size:16pt;">REPERTÓRIO DE CANTOS</h1>
+                <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData.toUpperCase()}</p>
             </div>
             <div style="column-count: 2; column-gap: 10mm; column-rule: 0.1pt solid #eee;">`;
 
         repertorioAtual.forEach((m, index) => {
-            let letra = extrairSomenteLetra(m.htmlCifra).toLowerCase();
+            let letra = extrairSomenteLetra(m.htmlCifra).toUpperCase();
+            
             html += `
                 <div style="margin-bottom: 15px;">
                     <div style="border-bottom: 0.5px solid #ccc; margin-bottom: 4px;">
-                        <strong style="font-size: 12pt; text-transform: capitalize;">${index + 1}. ${m.nome.toLowerCase()}</strong>
+                        <strong style="font-size: 12pt;">${index + 1}. ${m.nome.toUpperCase()}</strong>
                     </div>
                     <div style="white-space: pre-wrap; font-size: 13pt; line-height: 1.3; margin-bottom: 10px;">${letra}</div>
                 </div>`;
@@ -217,7 +240,15 @@
 
         html += `</div>`;
         elementoPdf.innerHTML = html;
-        html2pdf().set({ margin: [15, 12, 20, 12], filename: `Letras_${dataVal}.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(elementoPdf).save();
+
+        const opt = {
+            margin: [15, 12, 20, 12],
+            filename: `Letras_Maiusculo_${dataVal}.pdf`,
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(elementoPdf).save();
     }
 
     function renderMenu(termo = '') {
