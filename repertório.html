@@ -20,22 +20,26 @@
         .musica-item:hover { background: #1a252f; }
         
         #lista-repertorio { background: #1a252f; border-radius: 5px; min-height: 50px; padding: 5px; margin-top: 5px; }
-        .repertorio-item { padding: 6px; font-size: 13px; display: flex; justify-content: space-between; background: #2c3e50; margin-bottom: 3px; border-left: 3px solid #27ae60; align-items: center; user-select: none; }
+        .repertorio-item { padding: 8px; font-size: 13px; display: flex; justify-content: space-between; background: #2c3e50; margin-bottom: 5px; border-left: 3px solid #27ae60; align-items: center; border-radius: 4px; }
+        
+        .controles-ordem { display: flex; gap: 4px; align-items: center; }
+        .btn-ordem { background: #1a252f; color: white; border: 1px solid #555; border-radius: 3px; cursor: pointer; padding: 2px 6px; font-size: 11px; transition: 0.2s; }
+        .btn-ordem:hover { background: #3498db; border-color: #3498db; }
 
         /* Main Content */
         .main-content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 900px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .container { width: 100%; max-width: 950px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
 
-        /* Cabeçalho Flexível com Player */
-        .header-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; border-bottom: 2px solid #f0f2f5; padding-bottom: 20px; margin-bottom: 20px; }
-        #player-embed-container { width: 320px; height: 180px; background: #000; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; flex-shrink: 0; }
+        .header-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 25px; border-bottom: 2px solid #f0f2f5; padding-bottom: 20px; margin-bottom: 20px; }
+        #player-embed-container { width: 320px; height: 180px; background: #000; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: none; flex-shrink: 0; }
 
-        #visor-cifra { white-space: pre; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 16px; line-height: 1.5; color: #000; }
+        #visor-cifra { white-space: pre; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 16px; line-height: 1.5; color: #000; overflow-x: auto; }
         .acorde { color: #e74c3c; font-weight: bold; background: #fdf2f2; border-radius: 3px; padding: 0 2px; }
 
         .btn-add { background: #27ae60; color: white; width: 100%; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
-        .btn-pdf { background: #c0392b; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        .btn-tom { background: #34495e; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; }
+        .btn-pdf { background: #c0392b; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; transition: 0.3s; }
+        .btn-pdf:hover { background: #a93226; }
+        .btn-tom { background: #34495e; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; font-weight: bold; }
         
         #modal-cadastro { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:200; }
         .modal-content { background:white; padding:25px; border-radius:10px; width:750px; display:flex; flex-direction:column; gap:10px; }
@@ -56,9 +60,10 @@
         <span id="dia-semana-display">Selecione uma data</span>
         
         <div id="lista-repertorio"></div>
+        
         <button class="btn-pdf" onclick="gerarPDF()">⬇ Exportar PDF com Cifras</button>
         <button class="btn-pdf" style="background:#8e44ad; margin-top:6px;" onclick="gerarPDFLetras()">⬇ Exportar PDF só Letras</button>
-        <button class="btn-add" style="background:#2980b9; margin-top:5px;" onclick="salvarAgenda()">💾 Salvar Agenda</button>
+        <button class="btn-add" style="background:#2980b9; margin-top:15px;" onclick="salvarAgenda()">💾 Salvar Agenda</button>
     </div>
 
     <h2>📚 Minha Biblioteca</h2>
@@ -74,8 +79,8 @@
     <div class="container">
         <div class="header-flex">
             <div style="flex: 1; text-align: left;">
-                <h1 id="titulo-musica" style="margin: 0; color: #2c3e50;">Inicie seu Repertório</h1>
-                <div class="controles" id="controles-transposicao" style="margin-top: 20px;">
+                <h1 id="titulo-musica" style="margin: 0; color: #2c3e50; font-size: 2rem;">Inicie seu Repertório</h1>
+                <div class="controles" id="controles-transposicao" style="margin-top: 25px;">
                     <button class="btn-tom" onclick="transpor(-1)">- Tom</button>
                     <button class="btn-tom" onclick="transpor(1)">+ Tom</button>
                     <button class="btn-tom" style="background:#27ae60" onclick="adicionarAoRepertorio()">+ Add ao Repertório</button>
@@ -83,19 +88,21 @@
             </div>
             <div id="player-embed-container"></div>
         </div>
-        <div id="visor-cifra">Selecione um cântico ao lado para visualizar a cifra e o áudio.</div>
+        <div id="visor-cifra">Selecione um cântico na biblioteca ao lado.</div>
     </div>
 </div>
 
 <div id="modal-cadastro">
     <div class="modal-content">
-        <h3>Dados do Cântico</h3>
+        <h3 id="modal-titulo-label">Dados do Cântico</h3>
         <input type="hidden" id="edit-id">
         <input type="text" id="novo-titulo" placeholder="Nome da Música">
-        <input type="text" id="novo-link" placeholder="Link do YouTube">
-        <textarea id="novo-texto" style="height:250px; font-family:monospace" placeholder="Cole sua cifra aqui..."></textarea>
-        <button onclick="salvar()" style="background:#27ae60; color:white; padding:10px; border:none; border-radius:5px; cursor:pointer;">Salvar</button>
-        <button onclick="fecharModal()" style="background:#95a5a6; color:white; padding:10px; border:none; border-radius:5px; cursor:pointer;">Cancelar</button>
+        <input type="text" id="novo-link" placeholder="Link do YouTube (ex: https://www.youtube.com/watch?v=...)">
+        <textarea id="novo-texto" style="height:300px; font-family:monospace" placeholder="Cole aqui a cifra ou a letra..."></textarea>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button onclick="fecharModal()" style="background:#95a5a6; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">Cancelar</button>
+            <button onclick="salvar()" style="background:#27ae60; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Salvar Cântico</button>
+        </div>
     </div>
 </div>
 
@@ -128,9 +135,26 @@
         repertorioAtual.forEach((m, i) => {
             const item = document.createElement('div');
             item.className = 'repertorio-item';
-            item.innerHTML = `<span>${i+1}. ${m.nome}</span><button onclick="removerDoRepertorio(${i})" style="background:none; border:none; color:#e74c3c; cursor:pointer;">✕</button>`;
+            item.innerHTML = `
+                <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${i+1}. ${m.nome}</span>
+                <div class="controles-ordem">
+                    <button class="btn-ordem" onclick="moverCanto(${i}, -1)" title="Subir">▲</button>
+                    <button class="btn-ordem" onclick="moverCanto(${i}, 1)" title="Descer">▼</button>
+                    <button onclick="removerDoRepertorio(${i})" style="background:none; border:none; color:#ff7675; cursor:pointer; font-weight:bold; margin-left:5px;">✕</button>
+                </div>
+            `;
             lista.appendChild(item);
         });
+    }
+
+    function moverCanto(index, direcao) {
+        const novoIndex = index + direcao;
+        if (novoIndex >= 0 && novoIndex < repertorioAtual.length) {
+            const temp = repertorioAtual[index];
+            repertorioAtual[index] = repertorioAtual[novoIndex];
+            repertorioAtual[novoIndex] = temp;
+            atualizarListaRepertorioUI();
+        }
     }
 
     function removerDoRepertorio(i) {
@@ -140,7 +164,7 @@
 
     function salvarAgenda() {
         const dataVal = document.getElementById('data-selecionada').value;
-        if(!dataVal) return alert("Selecione uma data!");
+        if(!dataVal) return alert("Selecione uma data no calendário!");
         agendas[dataVal] = repertorioAtual;
         localStorage.setItem('agendas_v7', JSON.stringify(agendas));
         alert("Agenda salva com sucesso!");
@@ -154,10 +178,10 @@
         return linhas.filter(l => l.trim() !== '' && !acorPattern.test(l)).join('\n');
     }
 
-       // --- PDF COM CIFRAS (COM LINK CLICÁVEL PARA ÁUDIO) ---
+    // --- PDF CIFRAS (CABEÇALHO, VERMELHO/NEGRITO, LINK, 2 COLUNAS) ---
     function gerarPDF() {
         const dataVal = document.getElementById('data-selecionada').value;
-        if (repertorioAtual.length === 0) return alert("Adicione músicas!");
+        if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
         const displayData = document.getElementById('dia-semana-display').innerText;
 
         const elementoPdf = document.createElement('div');
@@ -172,93 +196,52 @@
 
         repertorioAtual.forEach((m, index) => {
             const regexAcordes = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*)(?=\s|$)/g;
-            
-            // Recupera o link original do banco de dados para esta música específica
             const linkAudio = db[m.nome]?.link || "";
-            
             let textoFormatado = m.htmlCifra.replace(/<span class="acorde">/g, '').replace(/<\/span>/g, '');
             textoFormatado = textoFormatado.replace(regexAcordes, '<b style="color: #e74c3c;">$1</b>');
 
             htmlGeral += `
                 <div style="page-break-after: always; padding: 10mm; box-sizing: border-box;">
-                    <h2 style="font-family: Arial; margin: 0 0 5px 0;">
-                        ${index + 1}. ${m.nome}
-                    </h2>
-                    
-                    ${linkAudio ? `
-                    <div style="margin-bottom: 10px; font-family: Arial; font-size: 9pt;">
-                        <span style="color: #666;">Áudio de referência: </span>
-                        <a href="${linkAudio}" target="_blank" style="color: #c0392b; text-decoration: underline; font-weight: bold;">
-                            Clique aqui para ouvir no YouTube
-                        </a>
-                    </div>` : ''}
-
-                    <div style="border-top: 1px solid #000; padding-top: 10px; column-count: 2; column-gap: 10mm; column-fill: auto; height: 230mm; white-space: pre; font-size: 11pt; line-height: 1.2;">${textoFormatado}</div>
+                    <h2 style="font-family: Arial; margin: 0 0 5px 0;">${index + 1}. ${m.nome}</h2>
+                    ${linkAudio ? `<div style="margin-bottom: 10px; font-family: Arial; font-size: 9pt;"><span style="color:#666;">Link: </span><a href="${linkAudio}" target="_blank" style="color: #c0392b; text-decoration: underline; font-weight: bold;">Ouvir no YouTube</a></div>` : ''}
+                    <div style="border-top: 1px solid #000; padding-top: 10px; column-count: 2; column-gap: 10mm; column-fill: auto; height: 235mm; white-space: pre; font-size: 11pt; line-height: 1.2;">${textoFormatado}</div>
                 </div>`;
         });
 
         elementoPdf.innerHTML = htmlGeral;
-
-        const opt = {
-            margin: 0,
-            filename: `Cifras_Interativo_${dataVal}.pdf`,
-            html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
+        const opt = { margin: 0, filename: `Cifras_${dataVal}.pdf`, html2canvas: { scale: 2, useCORS: true, letterRendering: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
         html2pdf().set(opt).from(elementoPdf).save();
     }
 
-   // --- PDF LETRAS (MAIÚSCULO, 2 COLUNAS POR PÁGINA, ORDEM CRESCENTE) ---
+    // --- PDF LETRAS (MAIÚSCULO, ARIAL 13, 2 COLUNAS) ---
     function gerarPDFLetras() {
         const dataVal = document.getElementById('data-selecionada').value;
-        if (repertorioAtual.length === 0) return alert("Adicione músicas!");
+        if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
         const displayData = document.getElementById('dia-semana-display').innerText;
 
         const elementoPdf = document.createElement('div');
-        // Estilo base: Arial e Tudo em Maiúsculo
         elementoPdf.style.cssText = 'padding: 0; font-family: Arial, sans-serif; background: white; color: #000; text-transform: uppercase;';
 
-        // Cabeçalho fixo no topo do documento
         let htmlGeral = `
             <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px;">
                 <h1 style="margin:0; font-size:16pt;">REPERTÓRIO DE CANTOS</h1>
                 <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData.toUpperCase()}</p>
             </div>
+            <div style="column-count: 2; column-gap: 12mm; column-fill: auto; height: 255mm; column-rule: 0.1pt solid #ddd;">
         `;
-
-        // Container para as colunas com altura definida para forçar a dobra antes de mudar de página
-        // A altura de 255mm permite que o conteúdo preencha a página quase toda antes de ir para a coluna 2
-        htmlGeral += `<div style="
-            column-count: 2; 
-            column-gap: 10mm; 
-            column-fill: auto; 
-            height: 255mm; 
-            column-rule: 0.1pt solid #eee;
-        ">`;
 
         repertorioAtual.forEach((m, index) => {
             let letra = extrairSomenteLetra(m.htmlCifra).toUpperCase();
-            
             htmlGeral += `
                 <div style="margin-bottom: 20px;">
-                    <div style="border-bottom: 0.5px solid #ccc; margin-bottom: 6px;">
-                        <strong style="font-size: 12pt;">${index + 1}. ${m.nome.toUpperCase()}</strong>
-                    </div>
+                    <div style="border-bottom: 0.5px solid #ccc; margin-bottom: 6px;"><strong style="font-size: 12pt;">${index + 1}. ${m.nome.toUpperCase()}</strong></div>
                     <div style="white-space: pre-wrap; font-size: 13pt; line-height: 1.3; margin-bottom: 15px;">${letra}</div>
                 </div>`;
         });
 
         htmlGeral += `</div>`;
         elementoPdf.innerHTML = htmlGeral;
-
-        const opt = {
-            margin: [10, 12, 15, 12], // Margens da página [topo, esquerda, baixo, direita]
-            filename: `Letras_Colunas_${dataVal}.pdf`,
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
+        const opt = { margin: [10, 12, 20, 12], filename: `Letras_${dataVal}.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
         html2pdf().set(opt).from(elementoPdf).save();
     }
 
@@ -269,7 +252,7 @@
             if (nome.toLowerCase().includes(termo.toLowerCase())) {
                 const item = document.createElement('div');
                 item.className = 'musica-item';
-                item.innerHTML = `<span>${nome}</span><div><button onclick="event.stopPropagation(); abrirModal(true, '${nome}')">✎</button><button onclick="event.stopPropagation(); deletar('${nome}')">✖</button></div>`;
+                item.innerHTML = `<span>${nome}</span><div><button onclick="event.stopPropagation(); abrirModal(true, '${nome}')" style="background:none; border:none; color:white; cursor:pointer; font-size:16px;">✎</button><button onclick="event.stopPropagation(); deletar('${nome}')" style="background:none; border:none; color:white; cursor:pointer; font-size:16px; margin-left:5px;">✖</button></div>`;
                 item.onclick = () => exibir(nome);
                 lista.appendChild(item);
             }
@@ -284,36 +267,63 @@
         tituloElemento.innerText = nome;
         const m = db[nome];
 
-        // Lógica Player YouTube
+        // Player YouTube
         const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
         const ytMatch = (m.link || '').match(regExp);
         if (ytMatch) {
             playerContainer.style.display = 'block';
-            playerContainer.innerHTML = `<iframe width="320" height="180" src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen></iframe>`;
+            playerContainer.innerHTML = `<iframe width="320" height="180" src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
         } else {
             playerContainer.style.display = 'none';
+            playerContainer.innerHTML = '';
         }
 
         const regex = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13)*)(?=\s|$)/g;
         let linhasHtml = m.texto.split('\n').map(l => {
-            return (l.replace(/ /g, "").length < 10 && regex.test(l)) ? l.replace(regex, '<span class="acorde">$1</span>') : l;
+            // Detecção inteligente de linha de cifras (curta e com padrões de acordes)
+            return (l.replace(/ /g, "").length < 12 && regex.test(l)) ? l.replace(regex, '<span class="acorde">$1</span>') : l;
         });
         visor.innerHTML = linhasHtml.join('\n');
     }
 
     function abrirModal(edit = false, id = '') {
         document.getElementById('modal-cadastro').style.display = 'flex';
-        if(edit) { document.getElementById('edit-id').value = id; document.getElementById('novo-titulo').value = id; document.getElementById('novo-link').value = db[id].link || ''; document.getElementById('novo-texto').value = db[id].texto; }
-        else { document.getElementById('edit-id').value = ''; document.getElementById('novo-titulo').value = ''; document.getElementById('novo-link').value = ''; document.getElementById('novo-texto').value = ''; }
+        if(edit) { 
+            document.getElementById('modal-titulo-label').innerText = "Editar Cântico";
+            document.getElementById('edit-id').value = id; 
+            document.getElementById('novo-titulo').value = id; 
+            document.getElementById('novo-link').value = db[id].link || ''; 
+            document.getElementById('novo-texto').value = db[id].texto; 
+        } else { 
+            document.getElementById('modal-titulo-label').innerText = "Novo Cântico";
+            document.getElementById('edit-id').value = ''; 
+            document.getElementById('novo-titulo').value = ''; 
+            document.getElementById('novo-link').value = ''; 
+            document.getElementById('novo-texto').value = ''; 
+        }
     }
+
     function fecharModal() { document.getElementById('modal-cadastro').style.display = 'none'; }
+
     function salvar() {
-        const tit = document.getElementById('novo-titulo').value, txt = document.getElementById('novo-texto').value, old = document.getElementById('edit-id').value;
-        if(!tit || !txt) return; if(old && old !== tit) delete db[old];
-        db[tit] = { texto: txt, link: document.getElementById('novo-link').value };
-        localStorage.setItem('cifras_v7', JSON.stringify(db)); fecharModal(); renderMenu(); exibir(tit);
+        const tit = document.getElementById('novo-titulo').value;
+        const link = document.getElementById('novo-link').value;
+        const txt = document.getElementById('novo-texto').value;
+        const oldId = document.getElementById('edit-id').value;
+        
+        if(!tit || !txt) return alert("Preencha o título e o conteúdo!");
+        
+        if(oldId && oldId !== tit) delete db[oldId];
+        
+        db[tit] = { texto: txt, link: link };
+        localStorage.setItem('cifras_v7', JSON.stringify(db));
+        fecharModal();
+        renderMenu();
+        exibir(tit);
     }
-    function deletar(n) { if(confirm("Deletar?")) { delete db[n]; localStorage.setItem('cifras_v7', JSON.stringify(db)); renderMenu(); } }
+
+    function deletar(n) { if(confirm(`Deseja excluir "${n}" da sua biblioteca?`)) { delete db[n]; localStorage.setItem('cifras_v7', JSON.stringify(db)); renderMenu(); } }
+
     function transpor(s) {
         document.querySelectorAll('.acorde').forEach(el => {
             let nMatch = el.innerText.match(/[A-G][#b]?/);
@@ -326,8 +336,14 @@
             el.innerText = escala[idx] + comp;
         });
     }
-    function filtrarMusicas() { renderMenu(document.getElementById('busca-input').value); }
-    function limparBusca() { document.getElementById('busca-input').value = ''; renderMenu(); }
+
+    function filtrarMusicas() { 
+        const termo = document.getElementById('busca-input').value;
+        document.getElementById('busca-limpar').style.display = termo ? 'block' : 'none';
+        renderMenu(termo); 
+    }
+
+    function limparBusca() { document.getElementById('busca-input').value = ''; filtrarMusicas(); }
 
     renderMenu();
 </script>
