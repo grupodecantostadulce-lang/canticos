@@ -55,7 +55,30 @@
         .busca-wrapper { position: relative; margin-bottom: 8px; }
         #busca-input { width: 100%; padding: 8px 34px 8px 32px; border-radius: 6px; border: none; background: #1a252f; color: #ecf0f1; font-size: 13px; box-sizing: border-box; outline: none; }
         #busca-limpar { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #7f8c8d; cursor: pointer; display: none; }
-    </style>
+        
+        /* Destaque para datas com repertório */
+        .badge-data {
+            background: #3498db;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            margin: 3px;
+            display: inline-block;
+            cursor: pointer;
+            border: none;
+            transition: 0.3s;
+        }
+        .badge-data:hover {
+            background: #2980b9;
+            transform: scale(1.05);
+        }
+        #container-datas-salvas {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #455a64;
+        }
+   </style>
 </head>
 <body>
 
@@ -64,8 +87,13 @@
     
     <h2>📅 Agenda do Repertório</h2>
     <div class="agenda-container">
-        <input type="date" id="data-selecionada" class="input-data" onchange="atualizarDataDisplay()">
+        <input type="date" id="data-selecionada" class="input-data" onchange="atualizarDataDisplay(); atualizarDestaquesCalendario();">
         <span id="dia-semana-display">Selecione uma data</span>
+
+        <div id="container-datas-salvas">
+            <small style="color: #bdc3c7; display: block; margin-bottom: 5px;">Dias com Repertório:</small>
+            <div id="lista-datas-destaque"></div>
+        </div>
         
         <div id="lista-repertorio"></div>
         
@@ -233,7 +261,7 @@
 
         let htmlGeral = `
             <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px; font-family: Arial;">
-                <h1 style="margin:0; font-size:16pt; text-transform:uppercase;">Repertório de Cifras</h1>
+                <h1 style="margin:0; font-size:14pt; text-transform:uppercase;">Repertório de Cifras</h1>
                 <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData}</p>
             </div>
         `;
@@ -253,7 +281,7 @@
         });
 
         elementoPdf.innerHTML = htmlGeral;
-        html2pdf().set({ margin: 0, filename: `Cifras_${dataVal}.pdf`, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4' } }).from(elementoPdf).save();
+        html2pdf().set({ margin: 0, filename: `${dataVal}-Cânticos cifrados.pdf`, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4' } }).from(elementoPdf).save();
     }
 
     // --- PDF LETRAS (CORREÇÃO DE MÚLTIPLAS PÁGINAS) ---
@@ -268,7 +296,7 @@
 
         let htmlGeral = `
             <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:15px; padding-bottom:5px;">
-                <h1 style="margin:0; font-size:16pt;">REPERTÓRIO DE CANTOS</h1>
+                <h1 style="margin:0; font-size:14pt;">REPERTÓRIO DE CANTOS</h1>
                 <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData.toUpperCase()}</p>
             </div>
             <div style="
@@ -288,7 +316,7 @@
                     <div style="border-bottom: 0.5px solid #ccc; margin-bottom: 6px;">
                         <strong style="font-size: 12pt;">${index + 1}. ${m.nome.toUpperCase()}</strong>
                     </div>
-                    <div style="white-space: pre-wrap; font-size: 13pt; line-height: 1.3; margin-bottom: 15px;">${letra}</div>
+                    <div style="white-space: pre-wrap; font-size: 12pt; line-height: 1.3; margin-bottom: 15px;">${letra}</div>
                 </div>`;
         });
 
@@ -297,7 +325,7 @@
 
         const opt = {
             margin: [15, 12, 15, 12], // Margens equilibradas para todas as páginas
-            filename: `Letras dos Cânticos-${dataVal}.pdf`,
+            filename: `${dataVal}-Letras dos Cânticos.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -370,6 +398,58 @@
     function limparBusca() { document.getElementById('busca-input').value = ''; renderMenu(); }
 
     renderMenu();
+
+  function atualizarDestaquesCalendario() {
+    const container = document.getElementById('lista-datas-destaque');
+    const dataSelecionada = document.getElementById('data-selecionada').value;
+    container.innerHTML = '';
+    
+    // Se não houver data selecionada, usamos o mês atual como padrão para o filtro
+    let mesFiltro, anoFiltro;
+    
+    if (dataSelecionada) {
+        const partes = dataSelecionada.split('-');
+        anoFiltro = partes[0];
+        mesFiltro = partes[1];
+    } else {
+        const hoje = new Date();
+        anoFiltro = hoje.getFullYear().toString();
+        mesFiltro = (hoje.getMonth() + 1).toString().padStart(2, '0');
+    }
+
+    // Filtra as datas: deve ter conteúdo E pertencer ao mês/ano selecionado
+    const datasFiltradas = Object.keys(agendas).filter(data => {
+        const [ano, mes] = data.split('-');
+        return agendas[data].length > 0 && ano === anoFiltro && mes === mesFiltro;
+    });
+
+    // Atualiza o título da seção para mostrar o mês atual do filtro
+    const nomesMeses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    const legenda = document.querySelector('#container-datas-salvas small');
+    if (legenda) {
+        legenda.innerText = `Repertórios de ${nomesMeses[parseInt(mesFiltro) - 1]}:`;
+    }
+
+    if (datasFiltradas.length === 0) {
+        container.innerHTML = '<small style="color: #7f8c8d; font-style: italic;">Nenhum neste mês.</small>';
+        return;
+    }
+
+    // Ordena e cria os botões
+    datasFiltradas.sort().forEach(data => {
+        const btn = document.createElement('button');
+        btn.className = 'badge-data';
+        const [ano, mes, dia] = data.split('-');
+        btn.innerText = dia; // Mostra apenas o dia para economizar espaço
+        btn.title = `Abrir repertório do dia ${dia}/${mes}/${ano}`;
+        
+        btn.onclick = () => {
+            document.getElementById('data-selecionada').value = data;
+            atualizarDataDisplay();
+        };
+        container.appendChild(btn);
+    });
+}
 </script>
 </body>
 </html>
