@@ -209,41 +209,52 @@
         html2pdf().set(opt).from(elementoPdf).save();
     }
 
-    // --- PDF LETRAS (FONTE MAIÚSCULA E FLUXO CONTÍNUO) ---
+   // --- PDF LETRAS (MAIÚSCULO, 2 COLUNAS POR PÁGINA, ORDEM CRESCENTE) ---
     function gerarPDFLetras() {
         const dataVal = document.getElementById('data-selecionada').value;
         if (repertorioAtual.length === 0) return alert("Adicione músicas!");
         const displayData = document.getElementById('dia-semana-display').innerText;
 
         const elementoPdf = document.createElement('div');
-        // Estilo: Arial, Branco, Texto em Maiúsculas
+        // Estilo base: Arial e Tudo em Maiúsculo
         elementoPdf.style.cssText = 'padding: 0; font-family: Arial, sans-serif; background: white; color: #000; text-transform: uppercase;';
 
-        let html = `
+        // Cabeçalho fixo no topo do documento
+        let htmlGeral = `
             <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px;">
                 <h1 style="margin:0; font-size:16pt;">REPERTÓRIO DE CANTOS</h1>
                 <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData.toUpperCase()}</p>
             </div>
-            <div style="column-count: 2; column-gap: 10mm; column-rule: 0.1pt solid #eee;">`;
+        `;
+
+        // Container para as colunas com altura definida para forçar a dobra antes de mudar de página
+        // A altura de 255mm permite que o conteúdo preencha a página quase toda antes de ir para a coluna 2
+        htmlGeral += `<div style="
+            column-count: 2; 
+            column-gap: 10mm; 
+            column-fill: auto; 
+            height: 255mm; 
+            column-rule: 0.1pt solid #eee;
+        ">`;
 
         repertorioAtual.forEach((m, index) => {
             let letra = extrairSomenteLetra(m.htmlCifra).toUpperCase();
             
-            html += `
-                <div style="margin-bottom: 15px;">
-                    <div style="border-bottom: 0.5px solid #ccc; margin-bottom: 4px;">
+            htmlGeral += `
+                <div style="margin-bottom: 20px;">
+                    <div style="border-bottom: 0.5px solid #ccc; margin-bottom: 6px;">
                         <strong style="font-size: 12pt;">${index + 1}. ${m.nome.toUpperCase()}</strong>
                     </div>
-                    <div style="white-space: pre-wrap; font-size: 13pt; line-height: 1.3; margin-bottom: 10px;">${letra}</div>
+                    <div style="white-space: pre-wrap; font-size: 13pt; line-height: 1.3; margin-bottom: 15px;">${letra}</div>
                 </div>`;
         });
 
-        html += `</div>`;
-        elementoPdf.innerHTML = html;
+        htmlGeral += `</div>`;
+        elementoPdf.innerHTML = htmlGeral;
 
         const opt = {
-            margin: [15, 12, 20, 12],
-            filename: `Letras_Maiusculo_${dataVal}.pdf`,
+            margin: [10, 12, 15, 12], // Margens da página [topo, esquerda, baixo, direita]
+            filename: `Letras_Colunas_${dataVal}.pdf`,
             html2canvas: { scale: 2 },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
