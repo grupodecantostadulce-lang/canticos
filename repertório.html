@@ -20,18 +20,22 @@
         .musica-item:hover { background: #1a252f; }
         
         #lista-repertorio { background: #1a252f; border-radius: 5px; min-height: 50px; padding: 5px; margin-top: 5px; }
-        .repertorio-item { padding: 6px; font-size: 13px; display: flex; justify-content: space-between; background: #2c3e50; margin-bottom: 3px; border-left: 3px solid #27ae60; align-items: center; cursor: grab; user-select: none; }
+        .repertorio-item { padding: 6px; font-size: 13px; display: flex; justify-content: space-between; background: #2c3e50; margin-bottom: 3px; border-left: 3px solid #27ae60; align-items: center; user-select: none; }
 
         /* Main Content */
         .main-content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 850px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .container { width: 100%; max-width: 900px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
 
-        #visor-cifra { white-space: pre; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 16px; line-height: 1.5; margin-top: 20px; color: #000; }
+        /* Cabeçalho Flexível com Player */
+        .header-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; border-bottom: 2px solid #f0f2f5; padding-bottom: 20px; margin-bottom: 20px; }
+        #player-embed-container { width: 320px; height: 180px; background: #000; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; flex-shrink: 0; }
+
+        #visor-cifra { white-space: pre; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 16px; line-height: 1.5; color: #000; }
         .acorde { color: #e74c3c; font-weight: bold; background: #fdf2f2; border-radius: 3px; padding: 0 2px; }
 
         .btn-add { background: #27ae60; color: white; width: 100%; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
         .btn-pdf { background: #c0392b; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        .btn-tom { background: #34495e; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-tom { background: #34495e; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; }
         
         #modal-cadastro { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:200; }
         .modal-content { background:white; padding:25px; border-radius:10px; width:750px; display:flex; flex-direction:column; gap:10px; }
@@ -68,16 +72,18 @@
 
 <div class="main-content">
     <div class="container">
-        <div id="area-cabecalho" style="text-align: center;">
-            <h1 id="titulo-musica" style="margin: 0;">Inicie seu Repertório</h1>
-            <div id="link-audio-container"></div>
-            <div class="controles" id="controles-transposicao">
-                <button class="btn-tom" onclick="transpor(-1)">- Tom</button>
-                <button class="btn-tom" onclick="transpor(1)">+ Tom</button>
-                <button class="btn-tom" style="background:#27ae60" onclick="adicionarAoRepertorio()">+ Add ao Repertório</button>
+        <div class="header-flex">
+            <div style="flex: 1; text-align: left;">
+                <h1 id="titulo-musica" style="margin: 0; color: #2c3e50;">Inicie seu Repertório</h1>
+                <div class="controles" id="controles-transposicao" style="margin-top: 20px;">
+                    <button class="btn-tom" onclick="transpor(-1)">- Tom</button>
+                    <button class="btn-tom" onclick="transpor(1)">+ Tom</button>
+                    <button class="btn-tom" style="background:#27ae60" onclick="adicionarAoRepertorio()">+ Add ao Repertório</button>
+                </div>
             </div>
+            <div id="player-embed-container"></div>
         </div>
-        <div id="visor-cifra">Selecione um cântico ao lado.</div>
+        <div id="visor-cifra">Selecione um cântico ao lado para visualizar a cifra e o áudio.</div>
     </div>
 </div>
 
@@ -87,7 +93,7 @@
         <input type="hidden" id="edit-id">
         <input type="text" id="novo-titulo" placeholder="Nome da Música">
         <input type="text" id="novo-link" placeholder="Link do YouTube">
-        <textarea id="novo-texto" style="height:250px; font-family:monospace" placeholder="Cifra..."></textarea>
+        <textarea id="novo-texto" style="height:250px; font-family:monospace" placeholder="Cole sua cifra aqui..."></textarea>
         <button onclick="salvar()" style="background:#27ae60; color:white; padding:10px; border:none; border-radius:5px; cursor:pointer;">Salvar</button>
         <button onclick="fecharModal()" style="background:#95a5a6; color:white; padding:10px; border:none; border-radius:5px; cursor:pointer;">Cancelar</button>
     </div>
@@ -111,9 +117,8 @@
     function adicionarAoRepertorio() {
         const nome = document.getElementById('titulo-musica').innerText;
         if(nome === "Inicie seu Repertório") return;
-        const link = db[nome]?.link || '';
         const htmlCifra = document.getElementById('visor-cifra').innerHTML;
-        repertorioAtual.push({ nome, htmlCifra, link });
+        repertorioAtual.push({ nome, htmlCifra });
         atualizarListaRepertorioUI();
     }
 
@@ -138,7 +143,7 @@
         if(!dataVal) return alert("Selecione uma data!");
         agendas[dataVal] = repertorioAtual;
         localStorage.setItem('agendas_v7', JSON.stringify(agendas));
-        alert("Agenda salva!");
+        alert("Agenda salva com sucesso!");
     }
 
     function extrairSomenteLetra(htmlCifra) {
@@ -149,29 +154,24 @@
         return linhas.filter(l => l.trim() !== '' && !acorPattern.test(l)).join('\n');
     }
 
-    // --- PDF COM CIFRAS (CORRIGIDO ALINHAMENTO) ---
+    // --- PDF CIFRAS (COM CABEÇALHO, NEGRITO VERMELHO E 2 COLUNAS DINÂMICAS) ---
     function gerarPDF() {
         const dataVal = document.getElementById('data-selecionada').value;
         if (repertorioAtual.length === 0) return alert("Adicione músicas!");
-
         const displayData = document.getElementById('dia-semana-display').innerText;
+
         const elementoPdf = document.createElement('div');
-        
-        // Estilo base do documento
         elementoPdf.style.cssText = 'padding: 0; font-family: "Courier New", Courier, monospace; background: white; color: #000;';
 
-        // Cabeçalho (Igual ao PDF de Letras)
         let htmlGeral = `
-            <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px; font-family: Arial, sans-serif;">
-                <h1 style="margin:0; font-size:16pt; text-transform:uppercase;">Repertório de Cânticos</h1>
+            <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px; font-family: Arial;">
+                <h1 style="margin:0; font-size:16pt; text-transform:uppercase;">Repertório de Cifras</h1>
                 <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData}</p>
             </div>
         `;
 
         repertorioAtual.forEach((m, index) => {
             const regexAcordes = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*)(?=\s|$)/g;
-            
-            // Limpeza e aplicação de Negrito + Vermelho para as cifras
             let textoFormatado = m.htmlCifra.replace(/<span class="acorde">/g, '').replace(/<\/span>/g, '');
             textoFormatado = textoFormatado.replace(regexAcordes, '<b style="color: #e74c3c;">$1</b>');
 
@@ -180,100 +180,46 @@
                     <h2 style="font-family: Arial; margin: 0 0 10px 0; border-bottom: 1px solid #000; padding-bottom: 5px;">
                         ${index + 1}. ${m.nome}
                     </h2>
-                    <div style="
-                        column-count: 2; 
-                        column-gap: 10mm; 
-                        column-fill: auto; 
-                        height: 240mm; 
-                        white-space: pre; 
-                        font-size: 11pt; 
-                        line-height: 1.2;
-                    ">${textoFormatado}</div>
+                    <div style="column-count: 2; column-gap: 10mm; column-fill: auto; height: 240mm; white-space: pre; font-size: 11pt; line-height: 1.2;">${textoFormatado}</div>
                 </div>`;
         });
 
         elementoPdf.innerHTML = htmlGeral;
-
-        const opt = {
-            margin: 0,
-            filename: `Cifras_Com_Cabecalho_${dataVal}.pdf`,
-            html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        html2pdf().set(opt).from(elementoPdf).save();
+        html2pdf().set({ margin: 0, filename: `Cifras_${dataVal}.pdf`, html2canvas: { scale: 2, letterRendering: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(elementoPdf).save();
     }
 
-    // --- PDF SÓ LETRAS (ARIAL 13, MINÚSCULAS, COLUNAS) ---
+    // --- PDF LETRAS (ARIAL 13, MINÚSCULAS, CABEÇALHO) ---
     function gerarPDFLetras() {
-    const dataVal = document.getElementById('data-selecionada').value;
-    if (repertorioAtual.length === 0) return alert("Adicione músicas ao repertório!");
+        const dataVal = document.getElementById('data-selecionada').value;
+        if (repertorioAtual.length === 0) return alert("Adicione músicas!");
+        const displayData = document.getElementById('dia-semana-display').innerText;
 
-    const displayData = document.getElementById('dia-semana-display').innerText;
+        const elementoPdf = document.createElement('div');
+        elementoPdf.style.cssText = 'padding: 0; font-family: Arial, sans-serif; background: white; color: #000;';
 
-    const elementoPdf = document.createElement('div');
-    elementoPdf.style.cssText = `
-        padding: 0mm;
-        font-family: Arial, sans-serif;
-        color: #000;
-        background: white;
-    `;
-
-    // Cabeçalho
-    let conteudoHtml = `
-        <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px;">
-            <h1 style="margin:0; font-size:16pt; text-transform:uppercase;">Repertório de Cânticos</h1>
-            <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData}</p>
-        </div>
-        
-        <div style="
-            column-count: 2;
-            column-gap: 10mm;
-            column-rule: 0.1pt solid #eee;
-            text-align: left;
-        ">
-    `;
-
-    repertorioAtual.forEach((m, index) => {
-        let letra = extrairSomenteLetra(m.htmlCifra);
-        
-        // Converte para minúscula
-        letra = letra.toLowerCase();
-
-        conteudoHtml += `
-            <div style="margin-bottom: 15px;">
-                <div style="border-bottom: 0.5px solid #ccc; margin-bottom: 4px;">
-                    <strong style="font-size: 12pt; text-transform: capitalize;">
-                        ${index + 1}. ${m.nome.toLowerCase()}
-                    </strong>
-                </div>
-                <div style="
-                    white-space: pre-wrap; 
-                    line-height: 1.3; 
-                    font-size: 13pt;
-                    font-family: Arial, sans-serif;
-                    margin-bottom: 10px;
-                ">${letra}</div>
+        let html = `
+            <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px;">
+                <h1 style="margin:0; font-size:16pt; text-transform:uppercase;">Repertório de Cantos</h1>
+                <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData}</p>
             </div>
-        `;
-    });
-  // Aumentei a margem inferior para 20mm (segurança total contra cortes)
-    conteudoHtml += `</div>`;
-    elementoPdf.innerHTML = conteudoHtml;
+            <div style="column-count: 2; column-gap: 10mm; column-rule: 0.1pt solid #eee;">`;
 
-    const opt = {
-        margin: [15, 12, 20, 12], 
-        filename: `Letras_${dataVal}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+        repertorioAtual.forEach((m, index) => {
+            let letra = extrairSomenteLetra(m.htmlCifra).toLowerCase();
+            html += `
+                <div style="margin-bottom: 15px;">
+                    <div style="border-bottom: 0.5px solid #ccc; margin-bottom: 4px;">
+                        <strong style="font-size: 12pt; text-transform: capitalize;">${index + 1}. ${m.nome.toLowerCase()}</strong>
+                    </div>
+                    <div style="white-space: pre-wrap; font-size: 13pt; line-height: 1.3; margin-bottom: 10px;">${letra}</div>
+                </div>`;
+        });
 
-    html2pdf().set(opt).from(elementoPdf).save();
-}
+        html += `</div>`;
+        elementoPdf.innerHTML = html;
+        html2pdf().set({ margin: [15, 12, 20, 12], filename: `Letras_${dataVal}.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(elementoPdf).save();
+    }
 
-  
-    // --- FUNÇÕES DE INTERFACE ---
     function renderMenu(termo = '') {
         const lista = document.getElementById('lista-musicas');
         lista.innerHTML = '';
@@ -289,13 +235,28 @@
     }
 
     function exibir(nome) {
-        document.getElementById('titulo-musica').innerText = nome;
+        const tituloElemento = document.getElementById('titulo-musica');
+        const playerContainer = document.getElementById('player-embed-container');
+        const visor = document.getElementById('visor-cifra');
+        
+        tituloElemento.innerText = nome;
         const m = db[nome];
+
+        // Lógica Player YouTube
+        const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+        const ytMatch = (m.link || '').match(regExp);
+        if (ytMatch) {
+            playerContainer.style.display = 'block';
+            playerContainer.innerHTML = `<iframe width="320" height="180" src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen></iframe>`;
+        } else {
+            playerContainer.style.display = 'none';
+        }
+
         const regex = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13)*)(?=\s|$)/g;
         let linhasHtml = m.texto.split('\n').map(l => {
-            return (l.replace(/ /g, "").length < 6 && regex.test(l)) ? l.replace(regex, '<span class="acorde">$1</span>') : l;
+            return (l.replace(/ /g, "").length < 10 && regex.test(l)) ? l.replace(regex, '<span class="acorde">$1</span>') : l;
         });
-        document.getElementById('visor-cifra').innerHTML = linhasHtml.join('\n');
+        visor.innerHTML = linhasHtml.join('\n');
     }
 
     function abrirModal(edit = false, id = '') {
