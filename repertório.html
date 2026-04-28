@@ -256,34 +256,55 @@
         html2pdf().set({ margin: 0, filename: `Cifras_${dataVal}.pdf`, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4' } }).from(elementoPdf).save();
     }
 
+    // --- PDF LETRAS (CORREÇÃO DE MÚLTIPLAS PÁGINAS) ---
     function gerarPDFLetras() {
         const dataVal = document.getElementById('data-selecionada').value;
-        if (repertorioAtual.length === 0) return alert("Adicione cânticos!");
+        if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
         const displayData = document.getElementById('dia-semana-display').innerText;
 
         const elementoPdf = document.createElement('div');
+        // Estilo: Arial, Branco, Texto em Maiúsculas
         elementoPdf.style.cssText = 'padding: 0; font-family: Arial, sans-serif; background: white; color: #000; text-transform: uppercase;';
 
         let htmlGeral = `
-            <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px;">
+            <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:15px; padding-bottom:5px;">
                 <h1 style="margin:0; font-size:16pt;">REPERTÓRIO DE CANTOS</h1>
                 <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData.toUpperCase()}</p>
             </div>
-            <div style="column-count: 2; column-gap: 10mm; column-fill: auto; height: 255mm; column-rule: 0.1pt solid #eee;">
+            <div style="
+                column-count: 2; 
+                column-gap: 10mm; 
+                column-rule: 0.1pt solid #eee;
+                display: block;
+                width: 100%;
+            ">
         `;
 
         repertorioAtual.forEach((m, index) => {
             let letra = extrairSomenteLetra(m.htmlCifra).toUpperCase();
+            
             htmlGeral += `
-                <div style="margin-bottom: 20px;">
-                    <div style="border-bottom: 0.5px solid #ccc; margin-bottom: 6px;"><strong style="font-size: 12pt;">${index + 1}. ${m.nome.toUpperCase()}</strong></div>
+                <div style="margin-bottom: 20px; display: block; break-inside: auto;">
+                    <div style="border-bottom: 0.5px solid #ccc; margin-bottom: 6px;">
+                        <strong style="font-size: 12pt;">${index + 1}. ${m.nome.toUpperCase()}</strong>
+                    </div>
                     <div style="white-space: pre-wrap; font-size: 13pt; line-height: 1.3; margin-bottom: 15px;">${letra}</div>
                 </div>`;
         });
 
         htmlGeral += `</div>`;
         elementoPdf.innerHTML = htmlGeral;
-        html2pdf().set({ margin: [10, 12, 15, 12], filename: `Letras_${dataVal}.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' } }).from(elementoPdf).save();
+
+        const opt = {
+            margin: [15, 12, 15, 12], // Margens equilibradas para todas as páginas
+            filename: `Letras_${dataVal}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        // O html2pdf cuidará automaticamente da quebra de páginas agora que o height fixo foi removido
+        html2pdf().set(opt).from(elementoPdf).save();
     }
 
     function renderMenu(termo = '') {
