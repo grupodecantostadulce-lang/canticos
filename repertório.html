@@ -374,13 +374,38 @@
         else { document.getElementById('edit-id').value = ''; document.getElementById('novo-titulo').value = ''; document.getElementById('novo-link').value = ''; document.getElementById('novo-texto').value = ''; }
     }
     function fecharModal() { document.getElementById('modal-cadastro').style.display = 'none'; }
+   
     function salvar() {
-        const tit = document.getElementById('novo-titulo').value, txt = document.getElementById('novo-texto').value, old = document.getElementById('edit-id').value;
-        if(!tit || !txt) return alert("Preencha título e conteúdo!");
-        if(oldId && oldId !== tit) delete db[oldId];
-        db[tit] = { texto: txt, link: document.getElementById('novo-link').value };
-        localStorage.setItem('cifras_v7', JSON.stringify(db)); fecharModal(); renderMenu(); exibir(tit);
+        // Captura os valores dos campos
+        const tit = document.getElementById('novo-titulo').value;
+        const txt = document.getElementById('novo-texto').value;
+        const link = document.getElementById('novo-link').value;
+        const old = document.getElementById('edit-id').value; // Esta é a variável correta
+
+        if (!tit || !txt) {
+            return alert("Preencha título e conteúdo!");
+        }
+
+        // Se o título mudou durante a edição, remove a entrada antiga para não duplicar
+        if (old && old !== tit) {
+            delete db[old];
+        }
+
+        // Salva os dados no objeto db
+        db[tit] = { 
+            texto: txt, 
+            link: link 
+        };
+
+        // Persiste no LocalStorage
+        localStorage.setItem('cifras_v7', JSON.stringify(db)); 
+        
+        // Fecha o modal e atualiza a interface
+        fecharModal(); 
+        renderMenu(); 
+        exibir(tit);
     }
+   
     function deletar(n) { if(confirm(`Excluir ${n}?`)) { delete db[n]; localStorage.setItem('cifras_v7', JSON.stringify(db)); renderMenu(); } }
     function transpor(s) {
         document.querySelectorAll('.acorde').forEach(el => {
