@@ -395,7 +395,7 @@
     try {
         // Packer.toBlob é o método correto para browser
         const blob = await Packer.toBlob(doc);
-        saveAs(blob, `${dataVal}-Letras-Sequencial.docx`);
+        saveAs(blob, `${dataVal}-Letras dos Cânticos.docx`);
     } catch (err) {
         console.error("Erro ao gerar DOCX:", err);
         alert("Erro ao gerar arquivo: " + err.message);
