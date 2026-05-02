@@ -142,6 +142,10 @@
     </div>
 </div>
 
+<!-- CDN do docx.js e FileSaver -->
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
 <script>
     const escala = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     let db = JSON.parse(localStorage.getItem('cifras_v7')) || {};
@@ -285,55 +289,117 @@
     }
 
     // --- PDF LETRAS (CORREÇÃO DE MÚLTIPLAS PÁGINAS) ---
-    function gerarPDFLetras() {
-        const dataVal = document.getElementById('data-selecionada').value;
-        if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
-        const displayData = document.getElementById('dia-semana-display').innerText;
+    
+   async function gerarPDFLetras() {
+    const dataVal = document.getElementById('data-selecionada').value;
+    if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
+    const displayData = document.getElementById('dia-semana-display').innerText;
 
-        const elementoPdf = document.createElement('div');
-        // Estilo: Arial, Branco, Texto em Maiúsculas
-        elementoPdf.style.cssText = 'padding: 0; font-family: Arial, sans-serif; background: white; color: #000; text-transform: uppercase;';
-
-        let htmlGeral = `
-            <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:15px; padding-bottom:5px;">
-                <h1 style="margin:0; font-size:14pt;">REPERTÓRIO DE CANTOS</h1>
-                <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData.toUpperCase()}</p>
-            </div>
-            <div style="
-                column-count: 2; 
-                column-gap: 10mm; 
-                column-rule: 0.1pt solid #eee;
-                display: block;
-                width: 100%;
-            ">
-        `;
-
-        repertorioAtual.forEach((m, index) => {
-            let letra = extrairSomenteLetra(m.htmlCifra).toUpperCase();
-            
-            htmlGeral += `
-                <div style="margin-bottom: 20px; display: block; break-inside: auto;">
-                    <div style="border-bottom: 0.5px solid #ccc; margin-bottom: 6px;">
-                        <strong style="font-size: 12pt;">${index + 1}. ${m.nome.toUpperCase()}</strong>
-                    </div>
-                    <div style="white-space: pre-wrap; font-size: 12pt; line-height: 1.3; margin-bottom: 15px;">${letra}</div>
-                </div>`;
-        });
-
-        htmlGeral += `</div>`;
-        elementoPdf.innerHTML = htmlGeral;
-
-        const opt = {
-            margin: [15, 12, 15, 12], // Margens equilibradas para todas as páginas
-            filename: `${dataVal}-Letras dos Cânticos.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        // O html2pdf cuidará automaticamente da quebra de páginas agora que o height fixo foi removido
-        html2pdf().set(opt).from(elementoPdf).save();
+    // Compatível com docx@8.x via CDN (window.docx)
+    if (typeof docx === 'undefined') {
+        return alert("Biblioteca docx.js não carregou. Verifique sua conexão.");
     }
+
+    const { Document, Packer, Paragraph, TextRun,
+            AlignmentType, BorderStyle, SectionType } = docx;
+
+    const paragraphs = [];
+
+    paragraphs.push(
+        new Paragraph({
+            alignment: AlignmentType.CENTER,
+            border: {
+                bottom: { style: BorderStyle.SINGLE, size: 12, color: "000000", space: 4 }
+            },
+            spacing: { before: 0, after: 140 },
+            children: [
+                new TextRun({
+                    text: "REPERTÓRIO DE CANTOS",
+                    bold: true,
+                    size: 28,
+                    font: "Arial",
+                })
+            ]
+        }),
+        new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 0, after: 280 },
+            children: [
+                new TextRun({
+                    text: displayData.toUpperCase(),
+                    size: 22,
+                    font: "Arial",
+                    color: "444444",
+                })
+            ]
+        })
+    );
+
+    repertorioAtual.forEach((m, index) => {
+        const letra = extrairSomenteLetra(m.htmlCifra).toUpperCase();
+        const linhas = letra.trim().split('\n');
+
+        paragraphs.push(
+            new Paragraph({
+                spacing: { before: 200, after: 60 },
+                border: {
+                    bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000", space: 2 }
+                },
+                children: [
+                    new TextRun({
+                        text: `${index + 1}. ${m.nome.toUpperCase()}`,
+                        bold: true,
+                        size: 24,
+                        font: "Arial",
+                    })
+                ]
+            })
+        );
+
+        linhas.forEach(linha => {
+            paragraphs.push(
+                new Paragraph({
+                    alignment: AlignmentType.JUSTIFIED,
+                    spacing: { before: 0, after: 0, line: 240 },
+                    children: [
+                        new TextRun({
+                            text: linha || " ",
+                            size: 24,
+                            font: "Arial",
+                        })
+                    ]
+                })
+            );
+        });
+    });
+
+    const doc = new Document({
+        sections: [{
+            properties: {
+                page: {
+                    size: { width: 11906, height: 16838 },
+                    margin: { top: 720, bottom: 720, left: 720, right: 720 }
+                },
+                column: {
+                    count: 2,
+                    space: 720,
+                    separate: true,
+                },
+                type: SectionType.CONTINUOUS,
+            },
+            children: paragraphs,
+        }]
+    });
+
+    try {
+        // Packer.toBlob é o método correto para browser
+        const blob = await Packer.toBlob(doc);
+        saveAs(blob, `${dataVal}-Letras-Sequencial.docx`);
+    } catch (err) {
+        console.error("Erro ao gerar DOCX:", err);
+        alert("Erro ao gerar arquivo: " + err.message);
+    }
+}
 
     function renderMenu(termo = '') {
         const lista = document.getElementById('lista-musicas');
