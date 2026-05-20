@@ -100,6 +100,8 @@
         <button class="btn-pdf" onclick="gerarPDF()">⬇ Exportar PDF com Cifras</button>
         <button class="btn-pdf" style="background:#8e44ad; margin-top:6px;" onclick="gerarPDFLetras()">⬇ Exportar PDF só Letras</button>
         <button class="btn-add" style="background:#2980b9; margin-top:15px;" onclick="salvarAgenda()">💾 Salvar Agenda</button>
+       <button class="btn-pdf" style="background:#16a085; margin-top:6px;" onclick="gerarPDFLista()"> 📋 Exportar Lista com Links
+</button>
     </div>
 
     <h2>📚 Minha Biblioteca</h2>
@@ -357,6 +359,79 @@
             })
         );
 
+        function gerarPDFLista() {
+    const dataVal = document.getElementById('data-selecionada').value;
+    if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
+    const displayData = document.getElementById('dia-semana-display').innerText;
+
+    const elementoPdf = document.createElement('div');
+    elementoPdf.style.cssText = `
+        padding: 0;
+        font-family: Arial, sans-serif;
+        background: white;
+        color: #000;
+    `;
+
+    // ── Cabeçalho ─────────────────────────────────────────────────
+    let html = `
+        <div style="
+            text-align: center;
+            border-bottom: 2px solid #000;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+        ">
+            <h1 style="
+                margin: 0;
+                font-size: 15pt;
+                font-weight: bold;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            ">CÂNTICOS ${displayData.toUpperCase()}</h1>
+        </div>
+    `;
+    // ── Lista de cânticos ──────────────────────────────────────────
+    repertorioAtual.forEach((m, index) => {
+        const link = (db[m.nome] && db[m.nome].link) ? db[m.nome].link.trim() : '';
+        const numero = String(index + 1).padStart(2, '0');
+
+        html += `
+            <div style="margin-bottom: 22px;">
+                <div style="
+                    font-size: 13pt;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    margin-bottom: 4px;
+                ">${numero} ${m.nome.toUpperCase()}</div>
+                ${link ? `
+                <div style="
+                    font-size: 11pt;
+                    color: #1a0dab;
+                    word-break: break-all;
+                ">${link}</div>` : `
+                <div style="
+                    font-size: 10pt;
+                    color: #999;
+                    font-style: italic;
+                ">Sem link de áudio</div>`}
+            </div>
+        `;
+    });
+
+    elementoPdf.innerHTML = html;
+
+    const opt = {
+        margin:      [15, 20, 15, 20],
+        filename:    `${dataVal}-Lista-Canticos.pdf`,
+        image:       { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak:   { mode: 'avoid-all' }
+    };
+
+    html2pdf().set(opt).from(elementoPdf).save();
+}
+
+        
         linhas.forEach(linha => {
             paragraphs.push(
                 new Paragraph({
