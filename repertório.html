@@ -279,7 +279,7 @@
         });
 
         elementoPdf.innerHTML = htmlGeral;
-        html2pdf().set({ margin: 0, filename: `${dataVal}-Cânticos cifrados.pdf`, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4' } }).from(elementoPdf).save();
+        html2pdf().set({ margin: 0, filename: `${dataVal}_Cânticos cifrados.pdf`, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4' } }).from(elementoPdf).save();
     }
 
     // ── EXPORTAR PDF LISTA COM LINKS ──────────────────────────────
