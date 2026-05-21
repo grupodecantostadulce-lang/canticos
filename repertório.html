@@ -255,12 +255,12 @@
         const displayData = document.getElementById('dia-semana-display').innerText;
 
         const elementoPdf = document.createElement('div');
-        elementoPdf.style.cssText = 'padding: 0; font-family: "Courier New", Courier, monospace; background: white; color: #000;';
+        elementoPdf.style.cssText = 'padding: 0; font-family: "Courier New", Courier, monospace; font-weight: bold';
 
         let htmlGeral = `
             <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px; font-family: Arial;">
                 <h1 style="margin:0; font-size:14pt; text-transform:uppercase;">Repertório de Cifras</h1>
-                <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData}</p>
+                <p style="margin:2px 0; font-size:12pt; color:#444;">${displayData}</p>
             </div>
         `;
 
