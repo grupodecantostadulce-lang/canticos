@@ -280,10 +280,10 @@
             textoFormatado = textoFormatado.replace(regexAcordes, '<b style="color: #e74c3c;">$1</b>');
 
             htmlGeral += `
-                <div style="page-break-after: always; padding: 10mm; box-sizing: border-box;">
-                    <h2 style="font-family: Arial; margin: 0 0 5px 0;">${index + 1}. ${m.nome}</h2>
+               <div style="page-break-after: always; padding: 3mm 10mm 10mm 10mm; box-sizing: border-box;">
+                    <h2 style="font-family: Arial; margin: 0 0 3px 0; font-size: 13pt;">${index + 1}. ${m.nome}</h2>
                     ${linkAudio ? `<div style="margin-bottom: 10px; font-family: Arial; font-size: 9pt;"><a href="${linkAudio}" target="_blank" style="color: #c0392b; text-decoration: underline; font-weight: bold;">Ouvir no YouTube</a></div>` : ''}
-                    <div style="border-top: 1px solid #000; padding-top: 10px; column-count: 2; column-gap: 10mm; column-fill: auto; height: 230mm; white-space: pre; font-size: 13pt; line-height: 1.2;">${textoFormatado}</div>
+                    <div style="border-top: 1px solid #000; padding-top: 10px; column-count: 2; column-gap: 10mm; column-fill: auto; height: 230mm; white-space: pre; font-size: 12pt; line-height: 1.2;">${textoFormatado}</div>
                 </div>`;
         });
 
