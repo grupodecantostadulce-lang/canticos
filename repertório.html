@@ -119,7 +119,9 @@
                 <div class="controles" id="controles-transposicao" style="margin-top: 25px;">
                     <button class="btn-tom" onclick="transpor(-1)">- Tom</button>
                     <button class="btn-tom" onclick="transpor(1)">+ Tom</button>
-                    <button class="btn-tom" style="background:#27ae60" onclick="adicionarAoRepertorio()">+ Add ao Repertório</button>
+                    <button class="btn-tom" style="background:#f39c12; margin-top: 8px;" onclick="editarCanticoAtual()">✎ Editar Cântico</button>
+                    <button class="btn-tom" style="background:#27ae60" onclick="adicionarAoRepertorio
+                    ()">+ Add ao Repertório</button>
                 </div>
             </div>
             <div id="player-embed-container"></div>
@@ -168,6 +170,13 @@
         repertorioAtual.push({ nome, htmlCifra });
         atualizarListaRepertorioUI();
     }
+
+    function editarCanticoAtual() {
+    const nome = document.getElementById('titulo-musica').innerText;
+    if (nome === "Inicie seu Repertório") return alert("Selecione um cântico primeiro!");
+    if (!db[nome]) return alert("Cântico não encontrado na biblioteca!");
+    abrirModal(true, nome);
+}
 
     function atualizarListaRepertorioUI() {
         const lista = document.getElementById('lista-repertorio');
@@ -274,12 +283,12 @@
                 <div style="page-break-after: always; padding: 10mm; box-sizing: border-box;">
                     <h2 style="font-family: Arial; margin: 0 0 5px 0;">${index + 1}. ${m.nome}</h2>
                     ${linkAudio ? `<div style="margin-bottom: 10px; font-family: Arial; font-size: 9pt;"><a href="${linkAudio}" target="_blank" style="color: #c0392b; text-decoration: underline; font-weight: bold;">Ouvir no YouTube</a></div>` : ''}
-                    <div style="border-top: 1px solid #000; padding-top: 10px; column-count: 2; column-gap: 10mm; column-fill: auto; height: 235mm; white-space: pre; font-size: 11pt; line-height: 1.2;">${textoFormatado}</div>
+                    <div style="border-top: 1px solid #000; padding-top: 10px; column-count: 2; column-gap: 10mm; column-fill: auto; height: 235mm; white-space: pre; font-size: 13pt; line-height: 1.2;">${textoFormatado}</div>
                 </div>`;
         });
 
         elementoPdf.innerHTML = htmlGeral;
-        html2pdf().set({ margin: 0, filename: `${dataVal}_Cânticos cifrados.pdf`, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4' } }).from(elementoPdf).save();
+        html2pdf().set({ margin: 0, filename: `${dataVal}-Cânticos cifrados.pdf`, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4' } }).from(elementoPdf).save();
     }
 
     // ── EXPORTAR PDF LISTA COM LINKS ──────────────────────────────
@@ -541,7 +550,7 @@
             if (nome.toLowerCase().includes(termo.toLowerCase())) {
                 const item = document.createElement('div');
                 item.className = 'musica-item';
-                item.innerHTML = `<span>${nome}</span><div><button onclick="event.stopPropagation(); abrirModal(true, '${nome}')">✎</button><button onclick="event.stopPropagation(); deletar('${nome}')">✖</button></div>`;
+                item.innerHTML = `<span>${nome}</span><div><button onclick="event.stopPropagation(); deletar('${nome}')">✖</button></div>`;
                 item.onclick = () => exibir(nome);
                 lista.appendChild(item);
             }
