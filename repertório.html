@@ -292,84 +292,98 @@
     }
 
     // ── EXPORTAR PDF LISTA COM LINKS ──────────────────────────────
-    function gerarPDFLista() {
-        const dataVal = document.getElementById('data-selecionada').value;
-        if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
-        const displayData = document.getElementById('dia-semana-display').innerText;
+        async function gerarPDFLista() {
+            const dataVal = document.getElementById('data-selecionada').value;
+            if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
+            const displayData = document.getElementById('dia-semana-display').innerText;
 
-        const elementoPdf = document.createElement('div');
-        elementoPdf.style.cssText = `
-            padding: 0;
-            font-family: Arial, sans-serif;
-            background: white;
-            color: #000;
-        `;
+            if (typeof docx === 'undefined') {
+                return alert("Biblioteca docx.js não carregou. Verifique se os arquivos docx.min.js e FileSaver.min.js estão na mesma pasta do HTML.");
+            }
 
-        // Cabeçalho
-        let html = `
-            <div style="
-                text-align: center;
-                border-bottom: 2px solid #000;
-                margin-bottom: 30px;
-                padding-bottom: 12px;
-            ">
-                <h1 style="
-                    margin: 0;
-                    font-size: 14pt;
-                    font-weight: bold;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                    font-family: Arial, sans-serif;
-                ">CÂNTICOS ${displayData.toUpperCase()}</h1>
-            </div>
-        `;
+            const { Document, Packer, Paragraph, TextRun,
+                    AlignmentType, BorderStyle, UnderlineType } = docx;
 
-        // Lista de cânticos
-        repertorioAtual.forEach((m, index) => {
-            const link = (db[m.nome] && db[m.nome].link) ? db[m.nome].link.trim() : '';
-            const numero = String(index + 1).padStart(2, '0');
+            const paragraphs = [];
 
-            html += `
-                <div style="margin-bottom: 24px;">
-                    <div style="
-                        font-size: 13pt;
-                        font-weight: bold;
-                        text-transform: uppercase;
-                        font-family: Arial, sans-serif;
-                        margin-bottom: 5px;
-                        color: #000;
-                    ">${numero} ${m.nome.toUpperCase()}</div>
-                    ${link
-                        ? `<div style="
-                                font-size: 11pt;
-                                font-family: Arial, sans-serif;
-                                color: #1a0dab;
-                                word-break: break-all;
-                            ">${link}</div>`
-                        : `<div style="
-                                font-size: 10pt;
-                                font-family: Arial, sans-serif;
-                                color: #999;
-                                font-style: italic;
-                            ">Sem link de áudio</div>`
-                    }
-                </div>
-            `;
-        });
+            // ── Cabeçalho ─────────────────────────────────────────────────
+            paragraphs.push(
+                new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    border: {
+                        bottom: { style: BorderStyle.SINGLE, size: 12, color: "000000", space: 6 }
+                    },
+                    spacing: { before: 0, after: 200 },
+                    children: [
+                        new TextRun({
+                            text: `CÂNTICOS ${displayData.toUpperCase()}`,
+                            bold: true,
+                            size: 28,       // 14pt
+                            font: "Arial",
+                        })
+                    ]
+                })
+            );
 
-        elementoPdf.innerHTML = html;
+            // ── Lista de cânticos ──────────────────────────────────────────
+            repertorioAtual.forEach((m, index) => {
+                const link = (db[m.nome] && db[m.nome].link) ? db[m.nome].link.trim() : '';
+                const numero = String(index + 1).padStart(2, '0');
 
-        const opt = {
-            margin:      [15, 20, 15, 20],
-            filename:    `${dataVal}-Lista-Canticos.pdf`,
-            image:       { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
-            jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak:   { mode: 'avoid-all' }
-        };
+                // Nome do cântico
+                paragraphs.push(
+                    new Paragraph({
+                        spacing: { before: 160, after: 40 },
+                        children: [
+                            new TextRun({
+                                text: `${numero} ${m.nome.toUpperCase()}`,
+                                bold: true,
+                                size: 26,   // 13pt
+                                font: "Arial",
+                            })
+                        ]
+                    })
+                );
 
-        html2pdf().set(opt).from(elementoPdf).save();
-    }
+                // Link ou mensagem sem link
+                paragraphs.push(
+                    new Paragraph({
+                        spacing: { before: 0, after: 80 },
+                        children: [
+                            new TextRun({
+                                text: link ? link : 'Sem link de áudio',
+                                size: 22,   // 11pt
+                                font: "Arial",
+                                color: link ? "1a0dab" : "999999",
+                                italics: !link,
+                                underline: link ? { type: UnderlineType.SINGLE, color: "1a0dab" } : undefined,
+                            })
+                        ]
+                    })
+                );
+            });
+
+            // ── Documento ─────────────────────────────────────────────────
+            const doc = new Document({
+                sections: [{
+                    properties: {
+                        page: {
+                            size: { width: 11906, height: 16838 }, // A4
+                            margin: { top: 1000, bottom: 1000, left: 1200, right: 1200 }
+                        }
+                    },
+                    children: paragraphs,
+                }]
+            });
+
+            try {
+                const blob = await Packer.toBlob(doc);
+                saveAs(blob, `${dataVal}-Lista-Canticos.docx`);
+            } catch (err) {
+                console.error("Erro ao gerar DOCX:", err);
+                alert("Erro ao gerar arquivo: " + err.message);
+            }
+        }
 
     // ── EXPORTAR DOCX SÓ LETRAS ───────────────────────────────────
     async function gerarPDFLetras() {
