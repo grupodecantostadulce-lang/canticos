@@ -258,6 +258,7 @@
     }
 
     // ── EXPORTAR PDF COM CIFRAS ───────────────────────────────────
+    // ── EXPORTAR PDF COM CIFRAS ───────────────────────────────────
     function gerarPDF() {
         const dataVal = document.getElementById('data-selecionada').value;
         if (repertorioAtual.length === 0) return alert("Adicione cânticos!");
@@ -275,8 +276,39 @@
 
         repertorioAtual.forEach((m, index) => {
             const linkAudio = db[m.nome]?.link || "";
-            const conteudo = m.htmlCifra
-                .replace(/<span class="acorde">(.*?)<\/span>/g, '<b style="color:#e74c3c;">$1</b>');
+            
+            // Tratamos o conteúdo separando por linhas para criar blocos indestrutíveis
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = m.htmlCifra;
+            const linhas = tempDiv.innerHTML.split('\n');
+            
+            let conteudoAgrupado = "";
+            
+            // Regex para identificar se a linha contém as tags de acorde que você inseriu
+            const temAcorde = /<span class="acorde">|<b style="color:#e74c3c;">/;
+
+            for (let i = 0; i < linhas.length; i++) {
+                // Se a linha atual for de acordes e a próxima for de texto, agrupamos as duas
+                if (temAcorde.test(linhas[i]) && i + 1 < linhas.length && !temAcorde.test(linhas[i+1])) {
+                    conteudoAgrupado += `
+                        <div style="page-break-inside: avoid; break-inside: avoid; display: block;">
+                            ${linhas[i]}
+                            ${linhas[i+1]}
+                        </div>
+                    `;
+                    i++; // Pula a próxima linha já que foi inclusa no bloco
+                } else {
+                    // Linhas isoladas (como quebras de estrofe vazias ou blocos só de texto/só de acordes)
+                    conteudoAgrupado += `
+                        <div style="page-break-inside: avoid; break-inside: avoid; display: block;">
+                            ${linhas[i] || '&nbsp;'}
+                        </div>
+                    `;
+                }
+            }
+
+            // Aplicamos a estilização das tags de negrito e cor vermelha nas cifras
+            conteudoAgrupado = conteudoAgrupado.replace(/<span class="acorde">(.*?)<\/span>/g, '<b style="color:#e74c3c;">$1</b>');
 
             htmlGeral += `
                 <div style="page-break-after: always; padding: 3mm 10mm 10mm 10mm; box-sizing: border-box;">
@@ -291,13 +323,13 @@
                         column-gap: 8mm;
                         column-fill: auto;
                         height: 255mm;
-                        white-space: pre-line;
-                        word-break: break-word;
+                        white-space: pre;
+                        word-break: keep-all;
                         font-family: 'Courier New', monospace;
                         font-size: 13pt;
                         line-height: 1.4;
                         overflow: hidden;
-                    ">${conteudo}</div>
+                    ">${conteudoAgrupado}</div>
                 </div>`;
         });
 
