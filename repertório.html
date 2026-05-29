@@ -8,7 +8,6 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; height: 100vh; margin: 0; overflow: hidden; }
         
-        /* Sidebar */
         .sidebar { width: 340px; background: #2c3e50; color: white; padding: 15px; display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; border-right: 5px solid #1a252f; }
         .sidebar h2 { font-size: 1.1rem; margin-top: 20px; border-bottom: 1px solid #34495e; padding-bottom: 5px; color: #3498db; }
         
@@ -21,7 +20,6 @@
         
         #lista-repertorio { background: #1a252f; border-radius: 5px; min-height: 50px; padding: 5px; margin-top: 5px; }
         
-        /* Itens Arrastáveis */
         .repertorio-item { 
             padding: 8px; font-size: 13px; display: flex; justify-content: space-between; 
             background: #2c3e50; margin-bottom: 5px; border-left: 3px solid #27ae60; 
@@ -35,7 +33,6 @@
         .controles-ordem { display: flex; gap: 4px; align-items: center; }
         .btn-ordem { background: #1a252f; color: white; border: 1px solid #555; border-radius: 3px; cursor: pointer; padding: 2px 6px; font-size: 11px; }
 
-        /* Main Content */
         .main-content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 950px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
 
@@ -56,28 +53,10 @@
         #busca-input { width: 100%; padding: 8px 34px 8px 32px; border-radius: 6px; border: none; background: #1a252f; color: #ecf0f1; font-size: 13px; box-sizing: border-box; outline: none; }
         #busca-limpar { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #7f8c8d; cursor: pointer; display: none; }
         
-        .badge-data {
-            background: #3498db;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 11px;
-            margin: 3px;
-            display: inline-block;
-            cursor: pointer;
-            border: none;
-            transition: 0.3s;
-        }
-        .badge-data:hover {
-            background: #2980b9;
-            transform: scale(1.05);
-        }
-        #container-datas-salvas {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid #455a64;
-        }
-   </style>
+        .badge-data { background: #3498db; color: white; padding: 5px 10px; border-radius: 15px; font-size: 11px; margin: 3px; display: inline-block; cursor: pointer; border: none; transition: 0.3s; }
+        .badge-data:hover { background: #2980b9; transform: scale(1.05); }
+        #container-datas-salvas { margin-top: 10px; padding-top: 10px; border-top: 1px solid #455a64; }
+    </style>
 </head>
 <body>
 
@@ -97,8 +76,8 @@
         <div id="lista-repertorio"></div>
         
         <button class="btn-pdf" onclick="gerarPDF()">⬇ Exportar PDF com Cifras</button>
-        <button class="btn-pdf" style="background:#8e44ad; margin-top:6px;" onclick="gerarPDFLetras()">⬇ Exportar PDF só Letras</button>
-        <button class="btn-pdf" style="background:#16a085; margin-top:6px;" onclick="gerarPDFLista()">📋 Exportar Lista com Links</button>
+        <button class="btn-pdf" style="background:#8e44ad; margin-top:6px;" onclick="gerarPDFLetras()">⬇ Exportar Letras (.docx)</button>
+        <button class="btn-pdf" style="background:#16a085; margin-top:6px;" onclick="gerarListaLinks()">📋 Exportar Lista com Links</button>
         <button class="btn-add" style="background:#2980b9; margin-top:15px;" onclick="salvarAgenda()">💾 Salvar Agenda</button>
     </div>
 
@@ -119,9 +98,8 @@
                 <div class="controles" id="controles-transposicao" style="margin-top: 25px;">
                     <button class="btn-tom" onclick="transpor(-1)">- Tom</button>
                     <button class="btn-tom" onclick="transpor(1)">+ Tom</button>
-                    <button class="btn-tom" style="background:#f39c12; margin-top: 8px;" onclick="editarCanticoAtual()">✎ Editar Cântico</button>
-                    <button class="btn-tom" style="background:#27ae60" onclick="adicionarAoRepertorio
-                    ()">+ Add ao Repertório</button>
+                    <button class="btn-tom" style="background:#27ae60" onclick="adicionarAoRepertorio()">+ Add ao Repertório</button>
+                    <button class="btn-tom" style="background:#f39c12; margin-top:8px;" onclick="editarCanticoAtual()">✎ Editar Cântico</button>
                 </div>
             </div>
             <div id="player-embed-container"></div>
@@ -154,9 +132,10 @@
     let repertorioAtual = [];
     let dragIndex = null;
 
+    // ── DATA E REPERTÓRIO ─────────────────────────────────────────
     function atualizarDataDisplay() {
         const dataVal = document.getElementById('data-selecionada').value;
-        if(!dataVal) return;
+        if (!dataVal) return;
         const dataObj = new Date(dataVal + 'T12:00:00');
         document.getElementById('dia-semana-display').innerText = dataObj.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' });
         repertorioAtual = agendas[dataVal] || [];
@@ -165,18 +144,11 @@
 
     function adicionarAoRepertorio() {
         const nome = document.getElementById('titulo-musica').innerText;
-        if(nome === "Inicie seu Repertório") return;
+        if (nome === "Inicie seu Repertório") return;
         const htmlCifra = document.getElementById('visor-cifra').innerHTML;
         repertorioAtual.push({ nome, htmlCifra });
         atualizarListaRepertorioUI();
     }
-
-    function editarCanticoAtual() {
-    const nome = document.getElementById('titulo-musica').innerText;
-    if (nome === "Inicie seu Repertório") return alert("Selecione um cântico primeiro!");
-    if (!db[nome]) return alert("Cântico não encontrado na biblioteca!");
-    abrirModal(true, nome);
-}
 
     function atualizarListaRepertorioUI() {
         const lista = document.getElementById('lista-repertorio');
@@ -186,7 +158,6 @@
             item.className = 'repertorio-item';
             item.draggable = true;
             item.dataset.index = i;
-            
             item.innerHTML = `
                 <span style="flex:1;">${i+1}. ${m.nome}</span>
                 <div class="controles-ordem">
@@ -195,33 +166,22 @@
                     <button onclick="removerDoRepertorio(${i})" style="background:none; border:none; color:#ff7675; cursor:pointer; margin-left:5px;">✕</button>
                 </div>
             `;
-
-            item.addEventListener('dragstart', (e) => {
-                dragIndex = i;
-                item.classList.add('dragging');
-            });
+            item.addEventListener('dragstart', () => { dragIndex = i; item.classList.add('dragging'); });
             item.addEventListener('dragend', () => {
                 item.classList.remove('dragging');
                 dragIndex = null;
                 document.querySelectorAll('.repertorio-item').forEach(el => el.classList.remove('drag-over'));
             });
-            item.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                item.classList.add('drag-over');
-            });
-            item.addEventListener('dragleave', () => {
-                item.classList.remove('drag-over');
-            });
+            item.addEventListener('dragover', (e) => { e.preventDefault(); item.classList.add('drag-over'); });
+            item.addEventListener('dragleave', () => { item.classList.remove('drag-over'); });
             item.addEventListener('drop', (e) => {
                 e.preventDefault();
-                const targetIndex = i;
-                if (dragIndex !== null && dragIndex !== targetIndex) {
+                if (dragIndex !== null && dragIndex !== i) {
                     const movedItem = repertorioAtual.splice(dragIndex, 1)[0];
-                    repertorioAtual.splice(targetIndex, 0, movedItem);
+                    repertorioAtual.splice(i, 0, movedItem);
                     atualizarListaRepertorioUI();
                 }
             });
-
             lista.appendChild(item);
         });
     }
@@ -243,7 +203,7 @@
 
     function salvarAgenda() {
         const dataVal = document.getElementById('data-selecionada').value;
-        if(!dataVal) return alert("Selecione uma data!");
+        if (!dataVal) return alert("Selecione uma data!");
         agendas[dataVal] = repertorioAtual;
         localStorage.setItem('agendas_v7', JSON.stringify(agendas));
         alert("Agenda salva!");
@@ -257,6 +217,46 @@
         return linhas.filter(l => l.trim() !== '' && !acorPattern.test(l)).join('\n');
     }
 
+    // ── EXIBIR CÂNTICO COM NOVA LÓGICA DE DETECÇÃO DE ACORDES ────
+    function exibir(nome) {
+        const tituloElemento = document.getElementById('titulo-musica');
+        const playerContainer = document.getElementById('player-embed-container');
+        const visor = document.getElementById('visor-cifra');
+        tituloElemento.innerText = nome;
+        const m = db[nome];
+
+        // Player YouTube
+        const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+        const ytMatch = (m.link || '').match(regExp);
+        if (ytMatch) {
+            playerContainer.style.display = 'block';
+            playerContainer.innerHTML = `<iframe width="320" height="180" src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen></iframe>`;
+        } else {
+            playerContainer.style.display = 'none';
+        }
+
+        // Regex de acorde — deve ser recriado a cada uso pois tem flag /g
+        function reAcorde() {
+            return /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*)(?=\s|$)/g;
+        }
+
+        // Uma linha é de acordes se, removendo todos os acordes, sobrar apenas espaços
+        function ehLinhaDeAcordes(linha) {
+            if (!linha.trim()) return false;
+            const semAcordes = linha.replace(reAcorde(), '').replace(/\s/g, '');
+            return semAcordes === '' && reAcorde().test(linha);
+        }
+
+        const linhasHtml = m.texto.split('\n').map(l => {
+            if (ehLinhaDeAcordes(l)) {
+                return l.replace(reAcorde(), '<span class="acorde">$1</span>');
+            }
+            return l;
+        });
+
+        visor.innerHTML = linhasHtml.join('\n');
+    }
+
     // ── EXPORTAR PDF COM CIFRAS ───────────────────────────────────
     function gerarPDF() {
         const dataVal = document.getElementById('data-selecionada').value;
@@ -264,126 +264,51 @@
         const displayData = document.getElementById('dia-semana-display').innerText;
 
         const elementoPdf = document.createElement('div');
-        elementoPdf.style.cssText = 'padding: 0; font-family: "Courier New", Courier, monospace; font-weight: bold';
+        elementoPdf.style.cssText = 'padding: 0; font-family: "Courier New", Courier, monospace; background: white; color: #000;';
 
         let htmlGeral = `
             <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px; font-family: Arial;">
                 <h1 style="margin:0; font-size:14pt; text-transform:uppercase;">Repertório de Cifras</h1>
-                <p style="margin:2px 0; font-size:12pt; color:#444;">${displayData}</p>
+                <p style="margin:2px 0; font-size:11pt; color:#444;">${displayData}</p>
             </div>
         `;
 
         repertorioAtual.forEach((m, index) => {
-            const regexAcordes = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*)(?=\s|$)/g;
             const linkAudio = db[m.nome]?.link || "";
-            let textoFormatado = m.htmlCifra.replace(/<span class="acorde">/g, '').replace(/<\/span>/g, '');
-            textoFormatado = textoFormatado.replace(regexAcordes, '<b style="color: #e74c3c;">$1</b>');
+            const conteudo = m.htmlCifra
+                .replace(/<span class="acorde">(.*?)<\/span>/g, '<b style="color:#e74c3c;">$1</b>');
 
             htmlGeral += `
-               <div style="page-break-after: always; padding: 3mm 10mm 10mm 10mm; box-sizing: border-box;">
+                <div style="page-break-after: always; padding: 3mm 10mm 10mm 10mm; box-sizing: border-box;">
                     <h2 style="font-family: Arial; margin: 0 0 3px 0; font-size: 13pt;">${index + 1}. ${m.nome}</h2>
-                    ${linkAudio ? `<div style="margin-bottom: 10px; font-family: Arial; font-size: 9pt;"><a href="${linkAudio}" target="_blank" style="color: #c0392b; text-decoration: underline; font-weight: bold;">Ouvir no YouTube</a></div>` : ''}
-                    <div style="border-top: 1px solid #000; padding-top: 10px; column-count: 2; column-gap: 10mm; column-fill: auto; height: 230mm; white-space: pre; font-size: 12pt; line-height: 1.2;">${textoFormatado}</div>
+                    ${linkAudio ? `<div style="margin-bottom: 5px; font-family: Arial; font-size: 9pt;">
+                        <a href="${linkAudio}" target="_blank" style="color:#c0392b; text-decoration:underline; font-weight:bold;">Ouvir no YouTube</a>
+                    </div>` : ''}
+                    <div style="
+                        border-top: 1px solid #000;
+                        padding-top: 6px;
+                        column-count: 2;
+                        column-gap: 8mm;
+                        column-fill: auto;
+                        height: 255mm;
+                        white-space: pre-wrap;
+                        word-break: break-word;
+                        font-family: 'Courier New', monospace;
+                        font-size: 13pt;
+                        line-height: 1.4;
+                        overflow: hidden;
+                    ">${conteudo}</div>
                 </div>`;
         });
 
         elementoPdf.innerHTML = htmlGeral;
-        html2pdf().set({ margin: 0, filename: `${dataVal}-Cânticos cifrados.pdf`, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4' } }).from(elementoPdf).save();
+        html2pdf().set({
+            margin: 0,
+            filename: `${dataVal}-Canticos-cifrados.pdf`,
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4' }
+        }).from(elementoPdf).save();
     }
-
-    // ── EXPORTAR PDF LISTA COM LINKS ──────────────────────────────
-        async function gerarPDFLista() {
-            const dataVal = document.getElementById('data-selecionada').value;
-            if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
-            const displayData = document.getElementById('dia-semana-display').innerText;
-
-            if (typeof docx === 'undefined') {
-                return alert("Biblioteca docx.js não carregou. Verifique se os arquivos docx.min.js e FileSaver.min.js estão na mesma pasta do HTML.");
-            }
-
-            const { Document, Packer, Paragraph, TextRun,
-                    AlignmentType, BorderStyle, UnderlineType } = docx;
-
-            const paragraphs = [];
-
-            // ── Cabeçalho ─────────────────────────────────────────────────
-            paragraphs.push(
-                new Paragraph({
-                    alignment: AlignmentType.CENTER,
-                    border: {
-                        bottom: { style: BorderStyle.SINGLE, size: 12, color: "000000", space: 6 }
-                    },
-                    spacing: { before: 0, after: 200 },
-                    children: [
-                        new TextRun({
-                            text: `CÂNTICOS ${displayData.toUpperCase()}`,
-                            bold: true,
-                            size: 28,       // 14pt
-                            font: "Arial",
-                        })
-                    ]
-                })
-            );
-
-            // ── Lista de cânticos ──────────────────────────────────────────
-            repertorioAtual.forEach((m, index) => {
-                const link = (db[m.nome] && db[m.nome].link) ? db[m.nome].link.trim() : '';
-                const numero = String(index + 1).padStart(2, '0');
-
-                // Nome do cântico
-                paragraphs.push(
-                    new Paragraph({
-                        spacing: { before: 160, after: 40 },
-                        children: [
-                            new TextRun({
-                                text: `${numero} ${m.nome.toUpperCase()}`,
-                                bold: true,
-                                size: 26,   // 13pt
-                                font: "Arial",
-                            })
-                        ]
-                    })
-                );
-
-                // Link ou mensagem sem link
-                paragraphs.push(
-                    new Paragraph({
-                        spacing: { before: 0, after: 80 },
-                        children: [
-                            new TextRun({
-                                text: link ? link : 'Sem link de áudio',
-                                size: 22,   // 11pt
-                                font: "Arial",
-                                color: link ? "1a0dab" : "999999",
-                                italics: !link,
-                                underline: link ? { type: UnderlineType.SINGLE, color: "1a0dab" } : undefined,
-                            })
-                        ]
-                    })
-                );
-            });
-
-            // ── Documento ─────────────────────────────────────────────────
-            const doc = new Document({
-                sections: [{
-                    properties: {
-                        page: {
-                            size: { width: 11906, height: 16838 }, // A4
-                            margin: { top: 1000, bottom: 1000, left: 1200, right: 1200 }
-                        }
-                    },
-                    children: paragraphs,
-                }]
-            });
-
-            try {
-                const blob = await Packer.toBlob(doc);
-                saveAs(blob, `${dataVal}-Lista-Canticos.docx`);
-            } catch (err) {
-                console.error("Erro ao gerar DOCX:", err);
-                alert("Erro ao gerar arquivo: " + err.message);
-            }
-        }
 
     // ── EXPORTAR DOCX SÓ LETRAS ───────────────────────────────────
     async function gerarPDFLetras() {
@@ -400,41 +325,26 @@
 
         const paragraphs = [];
 
-        // Cabeçalho
         paragraphs.push(
             new Paragraph({
                 alignment: AlignmentType.CENTER,
-                border: {
-                    bottom: { style: BorderStyle.SINGLE, size: 12, color: "000000", space: 4 }
-                },
+                border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: "000000", space: 4 } },
                 spacing: { before: 0, after: 140 },
                 children: [
-                    new TextRun({
-                        text: "REPERTÓRIO DE CANTOS",
-                        bold: true,
-                        size: 28,
-                        font: "Arial",
-                    })
+                    new TextRun({ text: "REPERTÓRIO DE CANTOS", bold: true, size: 28, font: "Arial" })
                 ]
             }),
             new Paragraph({
                 alignment: AlignmentType.CENTER,
                 spacing: { before: 0, after: 280 },
                 children: [
-                    new TextRun({
-                        text: displayData.toUpperCase(),
-                        size: 22,
-                        font: "Arial",
-                        color: "444444",
-                    })
+                    new TextRun({ text: displayData.toUpperCase(), size: 22, font: "Arial", color: "444444" })
                 ]
             })
         );
 
-        // Cânticos
         repertorioAtual.forEach((m, index) => {
 
-            // Extrai letra preservando quebras de linha
             function extrairLetraComQuebras(htmlCifra) {
                 const temp = document.createElement('div');
                 temp.innerHTML = htmlCifra
@@ -461,29 +371,18 @@
 
                 const textoCompleto = percorrerNos(temp);
                 const acordePattern = /^\s*([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*\s*)+\s*$/;
-                return textoCompleto
-                    .split('\n')
-                    .filter(l => !acordePattern.test(l))
-                    .join('\n');
+                return textoCompleto.split('\n').filter(l => !acordePattern.test(l)).join('\n');
             }
 
             const letra = extrairLetraComQuebras(m.htmlCifra).toUpperCase();
             const linhas = letra.split('\n');
 
-            // Título
             paragraphs.push(
                 new Paragraph({
                     spacing: { before: 200, after: 60 },
-                    border: {
-                        bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000", space: 2 }
-                    },
+                    border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000", space: 2 } },
                     children: [
-                        new TextRun({
-                            text: `${index + 1}. ${m.nome.toUpperCase()}`,
-                            bold: true,
-                            size: 24,
-                            font: "Arial",
-                        })
+                        new TextRun({ text: `${index + 1}. ${m.nome.toUpperCase()}`, bold: true, size: 24, font: "Arial" })
                     ]
                 })
             );
@@ -493,7 +392,6 @@
             linhas.forEach((linha) => {
                 const linhaLimpa = linha.trim();
 
-                // Linha vazia = separador de estrofe
                 if (linhaLimpa === '') {
                     emRefrao = false;
                     paragraphs.push(
@@ -505,30 +403,21 @@
                     return;
                 }
 
-                // Detecta marcador de refrão
                 const ehMarcadorRefrao = /^(\[?\s*(refr[aã]o|refrão|chorus|r\.?|bis|ponte)\s*:?\]?)$/i.test(linhaLimpa);
-                if (ehMarcadorRefrao) {
-                    emRefrao = true;
-                }
+                if (ehMarcadorRefrao) emRefrao = true;
 
                 paragraphs.push(
                     new Paragraph({
                         alignment: AlignmentType.JUSTIFIED,
                         spacing: { before: 0, after: 0, line: 240 },
                         children: [
-                            new TextRun({
-                                text: linhaLimpa,
-                                size: 24,
-                                font: "Arial",
-                                bold: emRefrao,
-                            })
+                            new TextRun({ text: linhaLimpa, size: 24, font: "Arial", bold: emRefrao })
                         ]
                     })
                 );
             });
         });
 
-        // Documento com 2 colunas nativas
         const doc = new Document({
             sections: [{
                 properties: {
@@ -536,11 +425,7 @@
                         size: { width: 11906, height: 16838 },
                         margin: { top: 720, bottom: 720, left: 720, right: 720 }
                     },
-                    column: {
-                        count: 2,
-                        space: 720,
-                        separate: true,
-                    },
+                    column: { count: 2, space: 720, separate: true },
                     type: SectionType.CONTINUOUS,
                 },
                 children: paragraphs,
@@ -550,6 +435,85 @@
         try {
             const blob = await Packer.toBlob(doc);
             saveAs(blob, `${dataVal}-Letras-Sequencial.docx`);
+        } catch (err) {
+            console.error("Erro ao gerar DOCX:", err);
+            alert("Erro ao gerar arquivo: " + err.message);
+        }
+    }
+
+    // ── EXPORTAR LISTA COM LINKS (.docx) ─────────────────────────
+    async function gerarListaLinks() {
+        const dataVal = document.getElementById('data-selecionada').value;
+        if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
+        const displayData = document.getElementById('dia-semana-display').innerText;
+
+        if (typeof docx === 'undefined') {
+            return alert("Biblioteca docx.js não carregou. Verifique se os arquivos docx.min.js e FileSaver.min.js estão na mesma pasta do HTML.");
+        }
+
+        const { Document, Packer, Paragraph, TextRun,
+                AlignmentType, BorderStyle, UnderlineType } = docx;
+
+        const paragraphs = [];
+
+        paragraphs.push(
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: "000000", space: 6 } },
+                spacing: { before: 0, after: 200 },
+                children: [
+                    new TextRun({
+                        text: `CÂNTICOS ${displayData.toUpperCase()}`,
+                        bold: true, size: 28, font: "Arial",
+                    })
+                ]
+            })
+        );
+
+        repertorioAtual.forEach((m, index) => {
+            const link = (db[m.nome] && db[m.nome].link) ? db[m.nome].link.trim() : '';
+            const numero = String(index + 1).padStart(2, '0');
+
+            paragraphs.push(
+                new Paragraph({
+                    spacing: { before: 160, after: 40 },
+                    children: [
+                        new TextRun({
+                            text: `${numero} ${m.nome.toUpperCase()}`,
+                            bold: true, size: 26, font: "Arial",
+                        })
+                    ]
+                }),
+                new Paragraph({
+                    spacing: { before: 0, after: 80 },
+                    children: [
+                        new TextRun({
+                            text: link ? link : 'Sem link de áudio',
+                            size: 22, font: "Arial",
+                            color: link ? "1a0dab" : "999999",
+                            italics: !link,
+                            underline: link ? { type: UnderlineType.SINGLE, color: "1a0dab" } : undefined,
+                        })
+                    ]
+                })
+            );
+        });
+
+        const doc = new Document({
+            sections: [{
+                properties: {
+                    page: {
+                        size: { width: 11906, height: 16838 },
+                        margin: { top: 1000, bottom: 1000, left: 1200, right: 1200 }
+                    }
+                },
+                children: paragraphs,
+            }]
+        });
+
+        try {
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, `${dataVal}-Lista-Canticos.docx`);
         } catch (err) {
             console.error("Erro ao gerar DOCX:", err);
             alert("Erro ao gerar arquivo: " + err.message);
@@ -571,28 +535,16 @@
         });
     }
 
-    function exibir(nome) {
-        const tituloElemento = document.getElementById('titulo-musica');
-        const playerContainer = document.getElementById('player-embed-container');
-        const visor = document.getElementById('visor-cifra');
-        tituloElemento.innerText = nome;
-        const m = db[nome];
-        const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-        const ytMatch = (m.link || '').match(regExp);
-        if (ytMatch) {
-            playerContainer.style.display = 'block';
-            playerContainer.innerHTML = `<iframe width="320" height="180" src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen></iframe>`;
-        } else {
-            playerContainer.style.display = 'none';
-        }
-        const regex = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13)*)(?=\s|$)/g;
-        let linhasHtml = m.texto.split('\n').map(l => (l.replace(/ /g, "").length < 12 && regex.test(l)) ? l.replace(regex, '<span class="acorde">$1</span>') : l);
-        visor.innerHTML = linhasHtml.join('\n');
+    function editarCanticoAtual() {
+        const nome = document.getElementById('titulo-musica').innerText;
+        if (nome === "Inicie seu Repertório") return alert("Selecione um cântico primeiro!");
+        if (!db[nome]) return alert("Cântico não encontrado na biblioteca!");
+        abrirModal(true, nome);
     }
 
     function abrirModal(edit = false, id = '') {
         document.getElementById('modal-cadastro').style.display = 'flex';
-        if(edit) {
+        if (edit) {
             document.getElementById('edit-id').value = id;
             document.getElementById('novo-titulo').value = id;
             document.getElementById('novo-link').value = db[id].link || '';
@@ -606,27 +558,23 @@
     }
 
     function fecharModal() { document.getElementById('modal-cadastro').style.display = 'none'; }
-   
+
     function salvar() {
         const tit = document.getElementById('novo-titulo').value;
         const txt = document.getElementById('novo-texto').value;
         const link = document.getElementById('novo-link').value;
         const old = document.getElementById('edit-id').value;
-
         if (!tit || !txt) return alert("Preencha título e conteúdo!");
-
         if (old && old !== tit) delete db[old];
-
         db[tit] = { texto: txt, link: link };
-
-        localStorage.setItem('cifras_v7', JSON.stringify(db)); 
-        fecharModal(); 
-        renderMenu(); 
+        localStorage.setItem('cifras_v7', JSON.stringify(db));
+        fecharModal();
+        renderMenu();
         exibir(tit);
     }
-   
+
     function deletar(n) {
-        if(confirm(`Excluir ${n}?`)) {
+        if (confirm(`Excluir ${n}?`)) {
             delete db[n];
             localStorage.setItem('cifras_v7', JSON.stringify(db));
             renderMenu();
@@ -636,12 +584,12 @@
     function transpor(s) {
         document.querySelectorAll('.acorde').forEach(el => {
             let nMatch = el.innerText.match(/[A-G][#b]?/);
-            if(!nMatch) return;
+            if (!nMatch) return;
             let n = nMatch[0], comp = el.innerText.replace(n, "");
             const mapa = {"Db":"C#","Eb":"D#","Gb":"F#","Ab":"G#","Bb":"A#"};
-            if(mapa[n]) n = mapa[n];
+            if (mapa[n]) n = mapa[n];
             let idx = (escala.indexOf(n) + s) % 12;
-            if(idx < 0) idx += 12;
+            if (idx < 0) idx += 12;
             el.innerText = escala[idx] + comp;
         });
     }
@@ -655,7 +603,7 @@
         const container = document.getElementById('lista-datas-destaque');
         const dataSelecionada = document.getElementById('data-selecionada').value;
         container.innerHTML = '';
-        
+
         let mesFiltro, anoFiltro;
         if (dataSelecionada) {
             const partes = dataSelecionada.split('-');
@@ -674,9 +622,7 @@
 
         const nomesMeses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
         const legenda = document.querySelector('#container-datas-salvas small');
-        if (legenda) {
-            legenda.innerText = `Repertórios de ${nomesMeses[parseInt(mesFiltro) - 1]}:`;
-        }
+        if (legenda) legenda.innerText = `Repertórios de ${nomesMeses[parseInt(mesFiltro) - 1]}:`;
 
         if (datasFiltradas.length === 0) {
             container.innerHTML = '<small style="color: #7f8c8d; font-style: italic;">Nenhum neste mês.</small>';
