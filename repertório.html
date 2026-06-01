@@ -571,22 +571,43 @@
         });
     }
 
-    function exibir(nome) {
+function exibir(nome) {
         const tituloElemento = document.getElementById('titulo-musica');
         const playerContainer = document.getElementById('player-embed-container');
         const visor = document.getElementById('visor-cifra');
+        
         tituloElemento.innerText = nome;
         const m = db[nome];
+        
         const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
         const ytMatch = (m.link || '').match(regExp);
+        
         if (ytMatch) {
             playerContainer.style.display = 'block';
             playerContainer.innerHTML = `<iframe width="320" height="180" src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen></iframe>`;
         } else {
             playerContainer.style.display = 'none';
         }
-        const regex = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13)*)(?=\s|$)/g;
-        let linhasHtml = m.texto.split('\n').map(l => (l.replace(/ /g, "").length < 12 && regex.test(l)) ? l.replace(regex, '<span class="acorde">$1</span>') : l);
+
+        // Regex atualizada para incluir também baixos invertidos (ex: D/F#), igual à função de extrair letra
+        const regex = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*)(?=\s|$)/g;
+
+        let linhasHtml = m.texto.split('\n').map(l => {
+            // Verifica se há pelo menos um acorde na linha
+            const temAcorde = l.match(regex);
+            
+            // Remove todos os acordes encontrados, espaços em branco e separadores comuns (como barras ou hifens)
+            const caracteresRestantes = l.replace(regex, '').replace(/[\s|\/\-\(\)]/g, '');
+
+            // Nova lógica: se tem acorde e, tirando os acordes, não sobra texto quase nenhum (margem < 5 caracteres soltos),
+            // temos certeza de que é uma linha inteira de cifras, independentemente do tamanho total dela.
+            if (temAcorde && caracteresRestantes.length < 5 && l.trim().length > 0) {
+                return l.replace(regex, '<span class="acorde">$1</span>');
+            }
+            
+            return l;
+        });
+        
         visor.innerHTML = linhasHtml.join('\n');
     }
 
