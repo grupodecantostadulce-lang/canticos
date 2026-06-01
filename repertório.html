@@ -581,7 +581,6 @@ function exibir(nome) {
         
         const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
         const ytMatch = (m.link || '').match(regExp);
-        
         if (ytMatch) {
             playerContainer.style.display = 'block';
             playerContainer.innerHTML = `<iframe width="320" height="180" src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen></iframe>`;
@@ -589,18 +588,16 @@ function exibir(nome) {
             playerContainer.style.display = 'none';
         }
 
-        // Regex atualizada para incluir também baixos invertidos (ex: D/F#), igual à função de extrair letra
-        const regex = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*)(?=\s|$)/g;
+        // Regex turbinada: reconhece 7+, (5-), 7M, b9, baixos invertidos (/C), etc.
+        const regex = /\b([A-G][#b]?(?:m|M|maj|dim|aug|sus|add)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?)(?=\s|$)/g;
 
         let linhasHtml = m.texto.split('\n').map(l => {
-            // Verifica se há pelo menos um acorde na linha
             const temAcorde = l.match(regex);
             
-            // Remove todos os acordes encontrados, espaços em branco e separadores comuns (como barras ou hifens)
-            const caracteresRestantes = l.replace(regex, '').replace(/[\s|\/\-\(\)]/g, '');
+            // Limpa os acordes e também símbolos extras que possam sobrar
+            const caracteresRestantes = l.replace(regex, '').replace(/[\s\/\-\(\)\+]/g, '');
 
-            // Nova lógica: se tem acorde e, tirando os acordes, não sobra texto quase nenhum (margem < 5 caracteres soltos),
-            // temos certeza de que é uma linha inteira de cifras, independentemente do tamanho total dela.
+            // Se tem acorde e quase não sobrou texto normal, pinta de vermelho
             if (temAcorde && caracteresRestantes.length < 5 && l.trim().length > 0) {
                 return l.replace(regex, '<span class="acorde">$1</span>');
             }
@@ -610,7 +607,6 @@ function exibir(nome) {
         
         visor.innerHTML = linhasHtml.join('\n');
     }
-
     function abrirModal(edit = false, id = '') {
         document.getElementById('modal-cadastro').style.display = 'flex';
         if(edit) {
