@@ -49,8 +49,10 @@
         .btn-pdf { background: #c0392b; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
         .btn-tom { background: #34495e; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; }
         
-        #modal-cadastro { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:200; }
+        /* Modais */
+        #modal-cadastro, #modal-duplicar { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:200; }
         .modal-content { background:white; padding:25px; border-radius:10px; width:750px; display:flex; flex-direction:column; gap:10px; }
+        .modal-content-sm { background:white; padding:25px; border-radius:10px; width:380px; display:flex; flex-direction:column; gap:15px; }
 
         .busca-wrapper { position: relative; margin-bottom: 8px; }
         #busca-input { width: 100%; padding: 8px 34px 8px 32px; border-radius: 6px; border: none; background: #1a252f; color: #ecf0f1; font-size: 13px; box-sizing: border-box; outline: none; }
@@ -100,11 +102,10 @@
         <button class="btn-pdf" style="background:#8e44ad; margin-top:6px;" onclick="gerarPDFLetras()">⬇ Exportar PDF só Letras</button>
         <button class="btn-pdf" style="background:#16a085; margin-top:6px;" onclick="gerarPDFLista()">📋 Exportar Lista com Links</button>
         
-        <!-- Botão para salvar -->
         <button class="btn-add" style="background:#2980b9; margin-top:15px;" onclick="salvarAgenda()">💾 Salvar Agenda</button>
         
-        <!-- NOVO BOTÃO: Duplicar Agenda -->
-        <button class="btn-add" style="background:#d35400; margin-top:6px;" onclick="duplicarAgenda()">📋 Duplicar Agenda</button>
+        <!-- Botão chama o Modal com Calendário -->
+        <button class="btn-add" style="background:#d35400; margin-top:6px;" onclick="abrirModalDuplicar()">📋 Duplicar Agenda</button>
     </div>
 
     <h2>📚 Minha Biblioteca</h2>
@@ -134,6 +135,7 @@
     </div>
 </div>
 
+<!-- Modal de Cadastro/Edição de Cântico -->
 <div id="modal-cadastro">
     <div class="modal-content">
         <h3 id="modal-titulo-label">Dados do Cântico</h3>
@@ -144,6 +146,21 @@
         <div style="display: flex; gap: 10px; justify-content: flex-end;">
             <button onclick="fecharModal()" style="background:#95a5a6; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">Cancelar</button>
             <button onclick="salvar()" style="background:#27ae60; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<!-- NOVO MODAL: Seleção de Data para Duplicar Agenda -->
+<div id="modal-duplicar">
+    <div class="modal-content-sm">
+        <h3 style="margin:0; color:#2c3e50;">📋 Duplicar Repertório</h3>
+        <p style="margin:0; font-size:13px; color:#7f8c8d;">Selecione a data para onde deseja copiar o repertório atual:</p>
+        
+        <input type="date" id="data-destino-duplicar" class="input-data" style="border:1px solid #ccc; font-size:14px; padding:10px;">
+        
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 5px;">
+            <button onclick="fecharModalDuplicar()" style="background:#95a5a6; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer;">Cancelar</button>
+            <button onclick="confirmarDuplicacao()" style="background:#d35400; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Copiar</button>
         </div>
     </div>
 </div>
@@ -253,11 +270,10 @@
         alert("Agenda salva!");
     }
 
-    // ── NOVA FUNÇÃO: DUPLICAR AGENDA ─────────────────────────────
-    function duplicarAgenda() {
+    // ── NOVAS FUNÇÕES: DUPLICAÇÃO VIA CALENDÁRIO ─────────────────
+    function abrirModalDuplicar() {
         const dataOrigem = document.getElementById('data-selecionada').value;
 
-        // Validamos se uma data de origem foi selecionada e se tem repertório
         if (!dataOrigem) {
             return alert("Por favor, selecione primeiro a data que deseja duplicar!");
         }
@@ -265,26 +281,35 @@
             return alert("A agenda da data selecionada está vazia!");
         }
 
-        // Solicita ao usuário a nova data no formato AAAA-MM-DD
-        const novaData = prompt("Digite a data de DESTINO para duplicar este repertório (Formato: AAAA-MM-DD):");
+        // Reseta a data do modal e exibe na tela
+        document.getElementById('data-destino-duplicar').value = '';
+        document.getElementById('modal-duplicar').style.display = 'flex';
+    }
 
-        if (!novaData) return; // Se o usuário cancelar a caixa de diálogo
+    function fecharModalDuplicar() {
+        document.getElementById('modal-duplicar').style.display = 'none';
+    }
 
-        // Validação simples da data digitada usando Expressão Regular
-        const regexData = /^\d{4}-\d{2}-\d{2}$/;
-        if (!regexData.test(novaData)) {
-            return alert("Formato de data inválido! Use o formato AAAA-MM-DD (Exemplo: 2026-08-15).");
+    function confirmarDuplicacao() {
+        const novaData = document.getElementById('data-destino-duplicar').value;
+
+        if (!novaData) {
+            return alert("Selecione a data de destino no calendário!");
         }
 
-        // Faz uma cópia direta (clone) dos objetos do repertório
-        agendas[novaData] = JSON.parse(JSON.stringify(repertorioAtual));
-        
-        // Salva no armazenamento local (localStorage)
-        localStorage.setItem('agendas_v7', JSON.stringify(agendas));
-        
-        alert(`Sucesso! O repertório foi duplicado para o dia ${novaData}.`);
+        const dataOrigem = document.getElementById('data-selecionada').value;
+        if (novaData === dataOrigem) {
+            return alert("A data de destino deve ser diferente da data de origem!");
+        }
 
-        // Atualiza a visualização da agenda trocando para a nova data
+        // Realiza a cópia profunda dos dados
+        agendas[novaData] = JSON.parse(JSON.stringify(repertorioAtual));
+        localStorage.setItem('agendas_v7', JSON.stringify(agendas));
+
+        alert(`Sucesso! Repertório copiado para a nova data.`);
+        fecharModalDuplicar();
+
+        // Altera a seleção atual para a nova data duplicada
         document.getElementById('data-selecionada').value = novaData;
         atualizarDataDisplay();
         atualizarDestaquesCalendario();
