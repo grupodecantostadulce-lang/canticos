@@ -103,8 +103,6 @@
         <button class="btn-pdf" style="background:#16a085; margin-top:6px;" onclick="gerarPDFLista()">📋 Exportar Lista com Links</button>
         
         <button class="btn-add" style="background:#2980b9; margin-top:15px;" onclick="salvarAgenda()">💾 Salvar Agenda</button>
-        
-        <!-- Botão chama o Modal com Calendário -->
         <button class="btn-add" style="background:#d35400; margin-top:6px;" onclick="abrirModalDuplicar()">📋 Duplicar Agenda</button>
     </div>
 
@@ -150,7 +148,7 @@
     </div>
 </div>
 
-<!-- NOVO MODAL: Seleção de Data para Duplicar Agenda -->
+<!-- MODAL: Seleção de Data para Duplicar Agenda -->
 <div id="modal-duplicar">
     <div class="modal-content-sm">
         <h3 style="margin:0; color:#2c3e50;">📋 Duplicar Repertório</h3>
@@ -174,6 +172,8 @@
     let agendas = JSON.parse(localStorage.getItem('agendas_v7')) || {};
     let repertorioAtual = [];
     let dragIndex = null;
+
+    const regexAcordeGlobal = /\b[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?(?=\s|$)/g;
 
     function atualizarDataDisplay() {
         const dataVal = document.getElementById('data-selecionada').value;
@@ -270,7 +270,7 @@
         alert("Agenda salva!");
     }
 
-    // ── NOVAS FUNÇÕES: DUPLICAÇÃO VIA CALENDÁRIO ─────────────────
+    // ── FUNÇÕES DE DUPLICAÇÃO VIA CALENDÁRIO ─────────────────
     function abrirModalDuplicar() {
         const dataOrigem = document.getElementById('data-selecionada').value;
 
@@ -281,7 +281,6 @@
             return alert("A agenda da data selecionada está vazia!");
         }
 
-        // Reseta a data do modal e exibe na tela
         document.getElementById('data-destino-duplicar').value = '';
         document.getElementById('modal-duplicar').style.display = 'flex';
     }
@@ -302,74 +301,102 @@
             return alert("A data de destino deve ser diferente da data de origem!");
         }
 
-        // Realiza a cópia profunda dos dados
         agendas[novaData] = JSON.parse(JSON.stringify(repertorioAtual));
         localStorage.setItem('agendas_v7', JSON.stringify(agendas));
 
         alert(`Sucesso! Repertório copiado para a nova data.`);
         fecharModalDuplicar();
 
-        // Altera a seleção atual para a nova data duplicada
         document.getElementById('data-selecionada').value = novaData;
         atualizarDataDisplay();
         atualizarDestaquesCalendario();
     }
 
-    function extrairSomenteLetra(htmlCifra) {
+    // ── PROCESSADOR INTELIGENTE DE CIFRAS/LETRAS ─────────────────
+    function formatarTextoCifra(textoBruto) {
         const temp = document.createElement('div');
-        temp.innerHTML = htmlCifra;
-        const linhas = temp.innerText.split('\n');
-        const acorPattern = /^\s*([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*\s*)+\s*$/;
-        return linhas.filter(l => l.trim() !== '' && !acorPattern.test(l)).join('\n');
+        temp.innerHTML = textoBruto;
+        const textoLimpo = temp.innerText || temp.textContent;
+
+        return textoLimpo.split('\n').map(linha => {
+            const linhaTrim = linha.trim();
+            if (!linhaTrim) return linha;
+
+            const palavras = linhaTrim.split(/\s+/);
+            const palavrasSemNumeros = palavras.filter(p => !/^\d+[\.\)]?$/.test(p));
+
+            if (palavrasSemNumeros.length === 0) return linha;
+
+            let qtdAcordes = 0;
+            let qtdPalavrasTexto = 0;
+
+            palavrasSemNumeros.forEach(palavra => {
+                const limpa = palavra.replace(/[\,\.\:\!\?\(\)\[\]]/g, '');
+                const ehAcorde = /^([A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?)$/.test(limpa);
+                
+                if (ehAcorde) {
+                    qtdAcordes++;
+                } else if (limpa.length >= 2 || !/^[A-G]$/.test(limpa)) {
+                    qtdPalavrasTexto++;
+                }
+            });
+
+            if (qtdPalavrasTexto > 0) {
+                return linha;
+            }
+
+            return linha.replace(regexAcordeGlobal, '<b style="color: #e74c3c;">$&</b>');
+        }).join('\n');
     }
 
-    // ── EXPORTAR PDF COM CIFRAS ───────────────────────────────────
+    // ── EXPORTAR PDF COM CIFRAS (CORRIGIDO SEM FOLHAS EM BRANCO) ──
     function gerarPDF() {
         const dataVal = document.getElementById('data-selecionada').value;
-        if (repertorioAtual.length === 0) return alert("Adicione cânticos!");
+        if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
         const displayData = document.getElementById('dia-semana-display').innerText;
 
         const elementoPdf = document.createElement('div');
-        elementoPdf.style.cssText = 'padding: 0; font-family: "Consolas", "Roboto Mono", "Courier New", monospace; font-size: 12pt; color: #000;';
+        elementoPdf.style.cssText = 'padding: 0; font-family: "Consolas", "Monaco", "Courier New", monospace; font-size: 10pt; color: #000;';
 
-        let htmlGeral = `
-            <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:10px; padding-bottom:5px; font-family: Arial, sans-serif;">
-                <h1 style="margin:0; font-size:14pt; text-transform:uppercase;">Repertório de Cifras</h1>
-                <p style="margin:2px 0; font-size:12pt; color:#444;">${displayData}</p>
-            </div>
-        `;
+        let htmlGeral = '';
 
         repertorioAtual.forEach((m, index) => {
-            const regexAcordes = /\b([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*)(?=\s|$)/g;
             const linkAudio = db[m.nome]?.link || "";
-            let textoFormatado = m.htmlCifra.replace(/<span class="acorde">/g, '').replace(/<\/span>/g, '');
-            textoFormatado = textoFormatado.replace(regexAcordes, '<b style="color: #e74c3c;">$1</b>');
+            const textoFormatado = formatarTextoCifra(m.htmlCifra);
 
+            // Usamos a classe CSS 'pdf-page' e a propriedade 'break-after: page' para controlar quebras
             htmlGeral += `
-               <div style="page-break-after: always; padding: 3mm 10mm 10mm 10mm; box-sizing: border-box;">
-                    <h2 style="font-family: Arial, sans-serif; margin: 0 0 3px 0; font-size: 14pt;">${index + 1}. ${m.nome}</h2>
-                    ${linkAudio ? `<div style="margin-bottom: 10px; font-family: Arial, sans-serif; font-size: 12pt;"><a href="${linkAudio}" target="_blank" style="color: #c0392b; text-decoration: underline; font-weight: bold;">Ouvir no YouTube</a></div>` : ''}
-                    <div style="border-top: 1px solid #000; padding-top: 10px; column-count: 2; column-gap: 10mm; column-fill: auto; height: 250mm; white-space: pre; font-size: 12pt; line-height: 1.3;">${textoFormatado}</div>
+               <div class="pdf-page" style="box-sizing: border-box; padding: 5mm 8mm; break-after: page; page-break-after: always;">
+                    <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:8px; padding-bottom:4px; font-family: Arial, sans-serif;">
+                        <h1 style="margin:0; font-size:13pt; text-transform:uppercase;">Repertório de Cifras</h1>
+                        <p style="margin:2px 0; font-size:12pt; color:#444;">${displayData}</p>
+                    </div>
+                    <h2 style="font-family: Arial, sans-serif; margin: 0 0 3px 0; font-size: 12pt;">${index + 1}. ${m.nome}</h2>
+                    ${linkAudio ? `<div style="margin-bottom: 6px; font-family: Arial, sans-serif; font-size: 12pt;"><a href="${linkAudio}" target="_blank" style="color: #c0392b; text-decoration: underline; font-weight: bold;">Ouvir no YouTube</a></div>` : ''}
+                    <div style="border-top: 1px solid #000; padding-top: 8px; column-count: 2; column-gap: 8mm; column-fill: auto; max-height: 235mm; white-space: pre; font-size: 12pt; line-height: 1.25;">${textoFormatado}</div>
                 </div>`;
         });
 
         elementoPdf.innerHTML = htmlGeral;
+
+        // Opções ajustadas do html2pdf.js com 'pagebreak' controlado
         html2pdf().set({ 
-            margin: 0, 
-            filename: `${dataVal}-Cânticos cifrados.pdf`, 
+            margin: [0, 0, 0, 0], 
+            filename: `${dataVal}-Canticos-Cifrados.pdf`, 
             html2canvas: { scale: 2, useCORS: true }, 
-            jsPDF: { unit: 'mm', format: 'a4' } 
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'], avoid: 'div.pdf-page' }
         }).from(elementoPdf).save();
     }
 
-    // ── EXPORTAR PDF LISTA COM LINKS ──────────────────────────────
+    // ── EXPORTAR DOCX LISTA COM LINKS ─────────────────────────────
     async function gerarPDFLista() {
         const dataVal = document.getElementById('data-selecionada').value;
         if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
         const displayData = document.getElementById('dia-semana-display').innerText;
 
         if (typeof docx === 'undefined') {
-            return alert("Biblioteca docx.js não carregou. Verifique se os arquivos docx.min.js e FileSaver.min.js estão na mesma pasta do HTML.");
+            return alert("Biblioteca docx.js não carregou. Verifique os arquivos na pasta.");
         }
 
         const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, UnderlineType } = docx;
@@ -456,7 +483,7 @@
         const displayData = document.getElementById('dia-semana-display').innerText;
 
         if (typeof docx === 'undefined') {
-            return alert("Biblioteca docx.js não carregou. Verifique se os arquivos docx.min.js e FileSaver.min.js estão na mesma pasta do HTML.");
+            return alert("Biblioteca docx.js não carregou. Verifique os arquivos na pasta.");
         }
 
         const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, SectionType } = docx;
@@ -518,7 +545,7 @@
                 }
 
                 const textoCompleto = percorrerNos(temp);
-                const acordePattern = /^\s*([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|\/[A-G][#b]?)*\s*)+\s*$/;
+                const acordePattern = /^\s*([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|º|°|\/[A-G][#b]?)*\s*)+\s*$/i;
                 return textoCompleto
                     .split('\n')
                     .filter(l => !acordePattern.test(l))
@@ -603,7 +630,7 @@
 
         try {
             const blob = await Packer.toBlob(doc);
-            saveAs(blob, `${dataVal}-Letras-dos-Cânticos.docx`);
+            saveAs(blob, `${dataVal}-Letras-dos-Canticos.docx`);
         } catch (err) {
             console.error("Erro ao gerar DOCX:", err);
             alert("Erro ao gerar arquivo: " + err.message);
@@ -632,6 +659,7 @@
         
         tituloElemento.innerText = nome;
         const m = db[nome];
+        if (!m) return;
         
         const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
         const ytMatch = (m.link || '').match(regExp);
@@ -642,20 +670,8 @@
             playerContainer.style.display = 'none';
         }
 
-        const regex = /\b([A-G][#b]?(?:m|M|maj|dim|aug|sus|add)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?)(?=\s|$)/g;
-
-        let linhasHtml = m.texto.split('\n').map(l => {
-            const temAcorde = l.match(regex);
-            const caracteresRestantes = l.replace(regex, '').replace(/[\s\/\-\(\)\+]/g, '');
-
-            if (temAcorde && caracteresRestantes.length < 5 && l.trim().length > 0) {
-                return l.replace(regex, '<span class="acorde">$1</span>');
-            }
-            
-            return l;
-        });
-        
-        visor.innerHTML = linhasHtml.join('\n');
+        const textoProcessado = formatarTextoCifra(m.texto);
+        visor.innerHTML = textoProcessado.replace(/<b style="color: #e74c3c;">(.*?)<\/b>/g, '<span class="acorde">$1</span>');
     }
 
     function abrirModal(edit = false, id = '') {
