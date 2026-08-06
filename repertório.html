@@ -382,7 +382,7 @@
         // Opções ajustadas do html2pdf.js com 'pagebreak' controlado
         html2pdf().set({ 
             margin: [0, 0, 0, 0], 
-            filename: `${dataVal}-Canticos-Cifrados.pdf`, 
+            filename: `${dataVal}_Canticos-Cifrados.pdf`, 
             html2canvas: { scale: 2, useCORS: true }, 
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['css', 'legacy'], avoid: 'div.pdf-page' }
