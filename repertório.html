@@ -50,7 +50,7 @@
         .btn-tom { background: #34495e; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; }
         
         /* Modais */
-        #modal-cadastro, #modal-duplicar, #modal-github { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:200; }
+        #modal-cadastro, #modal-duplicar, #modal-github, #modal-progresso { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:200; }
         .modal-content { background:white; padding:25px; border-radius:10px; width:750px; display:flex; flex-direction:column; gap:10px; }
         .modal-content-sm { background:white; padding:25px; border-radius:10px; width:380px; display:flex; flex-direction:column; gap:15px; }
 
@@ -80,11 +80,15 @@
             border-top: 1px solid #455a64;
         }
 
-        /* Estilos do Painel de Sincronização GitHub */
+        /* Painel GitHub */
         .github-panel { background: #1a252f; padding: 10px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #f39c12; }
         .btn-gh { background: #f39c12; color: white; padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; font-size: 12px; }
         .btn-gh-sync { background: #2980b9; color: white; padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1; font-size: 11px; }
         .gh-flex { display: flex; gap: 5px; margin-top: 5px; }
+
+        /* Estilos da Barra de Progresso */
+        .progress-bar-container { width: 100%; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; height: 20px; margin-top: 10px; }
+        .progress-bar-fill { height: 100%; width: 0%; background-color: #27ae60; transition: width 0.3s ease; }
    </style>
 </head>
 <body>
@@ -164,14 +168,12 @@
     </div>
 </div>
 
-<!-- MODAL: Seleção de Data para Duplicar Agenda -->
+<!-- MODAL: Duplicar Agenda -->
 <div id="modal-duplicar">
     <div class="modal-content-sm">
         <h3 style="margin:0; color:#2c3e50;">📋 Duplicar Repertório</h3>
         <p style="margin:0; font-size:13px; color:#7f8c8d;">Selecione a data para onde deseja copiar o repertório atual:</p>
-        
         <input type="date" id="data-destino-duplicar" class="input-data" style="border:1px solid #ccc; font-size:14px; padding:10px;">
-        
         <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 5px;">
             <button onclick="fecharModalDuplicar()" style="background:#95a5a6; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer;">Cancelar</button>
             <button onclick="confirmarDuplicacao()" style="background:#d35400; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Copiar</button>
@@ -184,15 +186,28 @@
     <div class="modal-content-sm">
         <h3 style="margin:0; color:#2c3e50;">⚙️ Configuração do GitHub</h3>
         <p style="margin:0; font-size:12px; color:#7f8c8d;">Insira os dados exatos do seu repositório:</p>
-        
         <input type="text" id="gh-user" placeholder="Usuário GitHub (ex: meunome)" class="input-data" style="border:1px solid #ccc; font-weight:normal;">
         <input type="text" id="gh-repo" placeholder="Nome do Repositório (ex: canticos)" class="input-data" style="border:1px solid #ccc; font-weight:normal;">
         <input type="password" id="gh-token" placeholder="Personal Access Token (ghp_...)" class="input-data" style="border:1px solid #ccc; font-weight:normal;">
-        
         <div style="display: flex; gap: 10px; justify-content: flex-end;">
             <button onclick="fecharModalGitHub()" style="background:#95a5a6; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer;">Cancelar</button>
             <button onclick="salvarConfigGitHub()" style="background:#f39c12; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Salvar Dados</button>
         </div>
+    </div>
+</div>
+
+<!-- MODAL: Progresso do Carregamento -->
+<div id="modal-progresso">
+    <div class="modal-content-sm" style="text-align: center;">
+        <h3 style="margin:0; color:#2c3e50;">☁️ A Enviar para o GitHub</h3>
+        <p id="progresso-status" style="margin:5px 0; font-size:13px; color:#555;">A preparar o envio...</p>
+        
+        <!-- Barra de Progresso Visual -->
+        <div class="progress-bar-container">
+            <div id="progress-bar-fill" class="progress-bar-fill"></div>
+        </div>
+        
+        <span id="progresso-porcentagem" style="font-weight:bold; color:#27ae60; margin-top:8px; display:block; font-size:14px;">0%</span>
     </div>
 </div>
 
@@ -208,9 +223,8 @@
 
     const regexAcordeGlobal = /\b[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?(?=\s|$)/g;
 
-    // ── MÓDULO GITHUB: ARQUIVOS INDIVIDUAIS POR CÂNTICO ───────────
+    // ── MÓDULO GITHUB E BARRA DE PROGRESSO ───────────────────────
 
-    // Converte títulos em nomes de arquivo seguros (ex: "Santo, Santo!" -> "santo-santo.json")
     function normalizarNomeArquivo(titulo) {
         const semAcento = titulo.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const limpo = semAcento.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
@@ -247,66 +261,19 @@
         fecharModalGitHub();
     }
 
-    // Baixa todos os cânticos da pasta 'canticos/' no GitHub
-    async function carregarDoGitHub(notificarSucesso = false) {
-        const user = localStorage.getItem('gh_user');
-        const repo = localStorage.getItem('gh_repo');
-        const token = localStorage.getItem('gh_token');
-
-        if(!user || !repo) return;
-
-        const urlPasta = `https://api.github.com/repos/${user}/${repo}/contents/canticos`;
-        const headers = {};
-        if(token) headers["Authorization"] = `token ${token}`;
-
-        try {
-            const resPasta = await fetch(urlPasta, { headers });
-            
-            if(!resPasta.ok) {
-                if(resPasta.status === 404 && notificarSucesso) {
-                    alert("A pasta 'canticos/' ainda não existe no repositório. Clique em '☁️ Enviar Cânticos' para criá-la.");
-                }
-                return;
-            }
-
-            const arquivos = await resPasta.json();
-            const arquivosJson = arquivos.filter(f => f.name.endsWith('.json'));
-
-            if(arquivosJson.length === 0) {
-                if(notificarSucesso) alert("Nenhum cântico encontrado na pasta 'canticos/'.");
-                return;
-            }
-
-            // Baixa cada cântico individualmente e monta a biblioteca
-            let novaBiblioteca = {};
-
-            for(const file of arquivosJson) {
-                const resFile = await fetch(file.download_url);
-                if(resFile.ok) {
-                    const canticoObj = await resFile.json();
-                    if(canticoObj.titulo && canticoObj.texto) {
-                        novaBiblioteca[canticoObj.titulo] = {
-                            texto: canticoObj.texto,
-                            link: canticoObj.link || ''
-                        };
-                    }
-                }
-            }
-
-            db = novaBiblioteca;
-            localStorage.setItem('cifras_v7', JSON.stringify(db));
-            renderMenu();
-
-            if(notificarSucesso) {
-                alert(`Sucesso! ${Object.keys(db).length} cântico(s) baixado(s) do GitHub. 🔄`);
-            }
-        } catch (err) {
-            console.error("Erro ao carregar do GitHub:", err);
-            if(notificarSucesso) alert("Erro de conexão ao carregar do GitHub.");
-        }
+    // Funções de Controlo do Modal de Progresso
+    function exibirProgresso(statusTexto, porcentagem) {
+        document.getElementById('modal-progresso').style.display = 'flex';
+        document.getElementById('progresso-status').innerText = statusTexto;
+        document.getElementById('progress-bar-fill').style.width = `${porcentagem}%`;
+        document.getElementById('progresso-porcentagem').innerText = `${porcentagem}%`;
     }
 
-    // Envia cada cântico da biblioteca local como um arquivo individual na pasta 'canticos/'
+    function fecharProgresso() {
+        document.getElementById('modal-progresso').style.display = 'none';
+    }
+
+    // Envia os cânticos para o GitHub com indicação de percentagem
     async function salvarNoGitHub() {
         const user = localStorage.getItem('gh_user');
         const repo = localStorage.getItem('gh_repo');
@@ -318,16 +285,26 @@
         }
 
         const nomesCanticos = Object.keys(db);
-        if(nomesCanticos.length === 0) {
+        const total = nomesCanticos.length;
+
+        if(total === 0) {
             return alert("A biblioteca local está vazia. Adicione cânticos antes de enviar.");
         }
 
         let enviados = 0;
         let erros = 0;
 
-        for(const titulo of nomesCanticos) {
+        // Abre o modal de progresso no início
+        exibirProgresso("Iniciando envio...", 0);
+
+        for(let i = 0; i < total; i++) {
+            const titulo = nomesCanticos[i];
             const nomeArquivo = normalizarNomeArquivo(titulo);
             const urlArquivo = `https://api.github.com/repos/${user}/${repo}/contents/canticos/${nomeArquivo}`;
+
+            // Calcula e atualiza a percentagem na interface
+            const porcentagem = Math.round(((i) / total) * 100);
+            exibirProgresso(`Enviando (${i + 1} de ${total}): "${titulo}"`, porcentagem);
 
             const conteudoObjeto = {
                 titulo: titulo,
@@ -339,7 +316,6 @@
             const conteudoBase64 = btoa(unescape(encodeURIComponent(jsonTexto)));
 
             try {
-                // Tenta buscar o SHA caso o arquivo já exista
                 let sha = "";
                 const getRes = await fetch(urlArquivo, {
                     headers: { "Authorization": `token ${token}` }
@@ -374,10 +350,88 @@
             }
         }
 
-        if(erros === 0) {
-            alert(`Todos os ${enviados} cânticos foram salvos individualmente no GitHub! ☁️`);
-        } else {
-            alert(`Envio concluído: ${enviados} salvo(s) com sucesso, ${erros} erro(s).`);
+        // Finaliza com 100%
+        exibirProgresso("Envio concluído!", 100);
+
+        // Aguarda meio segundo para o utilizador ver a barra cheia antes de fechar o modal
+        setTimeout(() => {
+            fecharProgresso();
+            if(erros === 0) {
+                alert(`Todos os ${enviados} cânticos foram salvas no GitHub com sucesso! ☁️`);
+            } else {
+                alert(`Envio concluído: ${enviados} salvo(s) com sucesso, ${erros} erro(s).`);
+            }
+        }, 500);
+    }
+
+    // Baixa todos os cânticos do GitHub
+    async function carregarDoGitHub(notificarSucesso = false) {
+        const user = localStorage.getItem('gh_user');
+        const repo = localStorage.getItem('gh_repo');
+        const token = localStorage.getItem('gh_token');
+
+        if(!user || !repo) return;
+
+        const urlPasta = `https://api.github.com/repos/${user}/${repo}/contents/canticos`;
+        const headers = {};
+        if(token) headers["Authorization"] = `token ${token}`;
+
+        try {
+            const resPasta = await fetch(urlPasta, { headers });
+            
+            if(!resPasta.ok) {
+                if(resPasta.status === 404 && notificarSucesso) {
+                    alert("A pasta 'canticos/' ainda não existe no repositório. Clique em '☁️ Enviar Cânticos' para criá-la.");
+                }
+                return;
+            }
+
+            const arquivos = await resPasta.json();
+            const arquivosJson = arquivos.filter(f => f.name.endsWith('.json'));
+            const total = arquivosJson.length;
+
+            if(total === 0) {
+                if(notificarSucesso) alert("Nenhum cântico encontrado na pasta 'canticos/'.");
+                return;
+            }
+
+            if(notificarSucesso) exibirProgresso("A baixar cânticos da nuvem...", 0);
+
+            let novaBiblioteca = {};
+
+            for(let i = 0; i < total; i++) {
+                const file = arquivosJson[i];
+                if(notificarSucesso) {
+                    const porcentagem = Math.round(((i + 1) / total) * 100);
+                    exibirProgresso(`A baixar (${i + 1} de ${total})...`, porcentagem);
+                }
+
+                const resFile = await fetch(file.download_url);
+                if(resFile.ok) {
+                    const canticoObj = await resFile.json();
+                    if(canticoObj.titulo && canticoObj.texto) {
+                        novaBiblioteca[canticoObj.titulo] = {
+                            texto: canticoObj.texto,
+                            link: canticoObj.link || ''
+                        };
+                    }
+                }
+            }
+
+            db = novaBiblioteca;
+            localStorage.setItem('cifras_v7', JSON.stringify(db));
+            renderMenu();
+
+            if(notificarSucesso) {
+                fecharProgresso();
+                alert(`Sucesso! ${Object.keys(db).length} cântico(s) baixado(s) do GitHub. 🔄`);
+            }
+        } catch (err) {
+            console.error("Erro ao carregar do GitHub:", err);
+            if(notificarSucesso) {
+                fecharProgresso();
+                alert("Erro de conexão ao carregar do GitHub.");
+            }
         }
     }
 
