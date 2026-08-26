@@ -94,11 +94,11 @@
     
     <!-- Painel GitHub -->
     <div class="github-panel">
-        <div style="font-size: 12px; color: #f39c12; font-weight: bold; margin-bottom: 5px;">☁️ GitHub Cloud Sync</div>
+        <div style="font-size: 12px; color: #f39c12; font-weight: bold; margin-bottom: 5px;">☁️ GitHub Multi-Arquivos</div>
         <button class="btn-gh" onclick="abrirModalGitHub()">⚙️ Configurar GitHub</button>
         <div class="gh-flex">
-            <button class="btn-gh-sync" style="background:#27ae60;" onclick="salvarNoGitHub()">☁️ Enviar</button>
-            <button class="btn-gh-sync" style="background:#8e44ad;" onclick="carregarDoGitHub(true)">🔄 Baixar</button>
+            <button class="btn-gh-sync" style="background:#27ae60;" onclick="salvarNoGitHub()">☁️ Enviar Cânticos</button>
+            <button class="btn-gh-sync" style="background:#8e44ad;" onclick="carregarDoGitHub(true)">🔄 Baixar Todos</button>
         </div>
     </div>
 
@@ -186,7 +186,7 @@
         <p style="margin:0; font-size:12px; color:#7f8c8d;">Insira os dados exatos do seu repositório:</p>
         
         <input type="text" id="gh-user" placeholder="Usuário GitHub (ex: meunome)" class="input-data" style="border:1px solid #ccc; font-weight:normal;">
-        <input type="text" id="gh-repo" placeholder="Nome do Repositório (ex: meurepertorio)" class="input-data" style="border:1px solid #ccc; font-weight:normal;">
+        <input type="text" id="gh-repo" placeholder="Nome do Repositório (ex: canticos)" class="input-data" style="border:1px solid #ccc; font-weight:normal;">
         <input type="password" id="gh-token" placeholder="Personal Access Token (ghp_...)" class="input-data" style="border:1px solid #ccc; font-weight:normal;">
         
         <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -208,7 +208,15 @@
 
     const regexAcordeGlobal = /\b[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?(?=\s|$)/g;
 
-    // ── MÓDULO DE INTEGRAÇÃO COM GITHUB (CORRIGIDO) ──────────────
+    // ── MÓDULO GITHUB: ARQUIVOS INDIVIDUAIS POR CÂNTICO ───────────
+
+    // Converte títulos em nomes de arquivo seguros (ex: "Santo, Santo!" -> "santo-santo.json")
+    function normalizarNomeArquivo(titulo) {
+        const semAcento = titulo.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const limpo = semAcento.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+        return `${limpo}.json`;
+    }
+
     function abrirModalGitHub() {
         document.getElementById('gh-user').value = localStorage.getItem('gh_user') || '';
         document.getElementById('gh-repo').value = localStorage.getItem('gh_repo') || '';
@@ -222,22 +230,24 @@
 
     function salvarConfigGitHub() {
         const user = document.getElementById('gh-user').value.trim();
-        const repo = document.getElementById('gh-repo').value.trim();
+        let repo = document.getElementById('gh-repo').value.trim();
         const token = document.getElementById('gh-token').value.trim();
 
         if(!user || !repo) {
             return alert("Por favor, preencha pelo menos o Usuário e o Repositório!");
         }
 
+        repo = repo.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
         localStorage.setItem('gh_user', user);
         localStorage.setItem('gh_repo', repo);
         localStorage.setItem('gh_token', token);
 
-        alert("Configurações do GitHub salvas com sucesso!");
+        alert(`Configurações salvas! Repositório: "${repo}"`);
         fecharModalGitHub();
     }
 
-    // Função para baixar os cânticos do GitHub
+    // Baixa todos os cânticos da pasta 'canticos/' no GitHub
     async function carregarDoGitHub(notificarSucesso = false) {
         const user = localStorage.getItem('gh_user');
         const repo = localStorage.getItem('gh_repo');
@@ -245,23 +255,50 @@
 
         if(!user || !repo) return;
 
-        const url = `https://api.github.com/repos/${user}/${repo}/contents/canticos.json`;
+        const urlPasta = `https://api.github.com/repos/${user}/${repo}/contents/canticos`;
         const headers = {};
         if(token) headers["Authorization"] = `token ${token}`;
 
         try {
-            const res = await fetch(url, { headers });
-            if(res.ok) {
-                const data = await res.json();
-                const conteudoTexto = decodeURIComponent(escape(atob(data.content)));
-                const canticosNuvem = JSON.parse(conteudoTexto);
+            const resPasta = await fetch(urlPasta, { headers });
+            
+            if(!resPasta.ok) {
+                if(resPasta.status === 404 && notificarSucesso) {
+                    alert("A pasta 'canticos/' ainda não existe no repositório. Clique em '☁️ Enviar Cânticos' para criá-la.");
+                }
+                return;
+            }
 
-                db = canticosNuvem;
-                localStorage.setItem('cifras_v7', JSON.stringify(db));
-                renderMenu();
-                if(notificarSucesso) alert("Biblioteca atualizada com sucesso a partir do GitHub! 🔄");
-            } else if(res.status === 404 && notificarSucesso) {
-                alert("O arquivo 'canticos.json' ainda não existe no repositório. Clique em '☁️ Enviar' para criar o arquivo inicial.");
+            const arquivos = await resPasta.json();
+            const arquivosJson = arquivos.filter(f => f.name.endsWith('.json'));
+
+            if(arquivosJson.length === 0) {
+                if(notificarSucesso) alert("Nenhum cântico encontrado na pasta 'canticos/'.");
+                return;
+            }
+
+            // Baixa cada cântico individualmente e monta a biblioteca
+            let novaBiblioteca = {};
+
+            for(const file of arquivosJson) {
+                const resFile = await fetch(file.download_url);
+                if(resFile.ok) {
+                    const canticoObj = await resFile.json();
+                    if(canticoObj.titulo && canticoObj.texto) {
+                        novaBiblioteca[canticoObj.titulo] = {
+                            texto: canticoObj.texto,
+                            link: canticoObj.link || ''
+                        };
+                    }
+                }
+            }
+
+            db = novaBiblioteca;
+            localStorage.setItem('cifras_v7', JSON.stringify(db));
+            renderMenu();
+
+            if(notificarSucesso) {
+                alert(`Sucesso! ${Object.keys(db).length} cântico(s) baixado(s) do GitHub. 🔄`);
             }
         } catch (err) {
             console.error("Erro ao carregar do GitHub:", err);
@@ -269,7 +306,7 @@
         }
     }
 
-    // Função para enviar os cânticos para o GitHub
+    // Envia cada cântico da biblioteca local como um arquivo individual na pasta 'canticos/'
     async function salvarNoGitHub() {
         const user = localStorage.getItem('gh_user');
         const repo = localStorage.getItem('gh_repo');
@@ -280,57 +317,67 @@
             return abrirModalGitHub();
         }
 
-        const url = `https://api.github.com/repos/${user}/${repo}/contents/canticos.json`;
+        const nomesCanticos = Object.keys(db);
+        if(nomesCanticos.length === 0) {
+            return alert("A biblioteca local está vazia. Adicione cânticos antes de enviar.");
+        }
 
-        try {
-            let sha = "";
-            
-            // Tenta buscar o arquivo existente para obter o identificador 'sha'
-            const getRes = await fetch(url, {
-                headers: { "Authorization": `token ${token}` }
-            });
+        let enviados = 0;
+        let erros = 0;
 
-            if(getRes.ok) {
-                const getData = await getRes.json();
-                sha = getData.sha;
-            } else if (getRes.status === 404) {
-                // Se o arquivo ainda não existir, isso é normal. Prosseguimos sem 'sha' para criar um arquivo novo.
-                console.log("Arquivo 'canticos.json' não encontrado. Será criado um novo no GitHub.");
-            } else {
-                // Se der erro 401 ou 403, as credenciais estão incorretas
-                const errData = await getRes.json();
-                return alert(`Erro de acesso ao GitHub (${getRes.status}): ${errData.message}. Verifique o seu Usuário, Repositório e permissões do Token.`);
-            }
+        for(const titulo of nomesCanticos) {
+            const nomeArquivo = normalizarNomeArquivo(titulo);
+            const urlArquivo = `https://api.github.com/repos/${user}/${repo}/contents/canticos/${nomeArquivo}`;
 
-            // Codifica o JSON da biblioteca para Base64
-            const jsonTexto = JSON.stringify(db, null, 2);
+            const conteudoObjeto = {
+                titulo: titulo,
+                texto: db[titulo].texto,
+                link: db[titulo].link || ''
+            };
+
+            const jsonTexto = JSON.stringify(conteudoObjeto, null, 2);
             const conteudoBase64 = btoa(unescape(encodeURIComponent(jsonTexto)));
 
-            const bodyData = {
-                message: "Atualização da Biblioteca de Cânticos",
-                content: conteudoBase64
-            };
-            if(sha) bodyData.sha = sha;
+            try {
+                // Tenta buscar o SHA caso o arquivo já exista
+                let sha = "";
+                const getRes = await fetch(urlArquivo, {
+                    headers: { "Authorization": `token ${token}` }
+                });
+                if(getRes.ok) {
+                    const getData = await getRes.json();
+                    sha = getData.sha;
+                }
 
-            // Faz a chamada PUT para criar ou atualizar o arquivo
-            const putRes = await fetch(url, {
-                method: "PUT",
-                headers: {
-                    "Authorization": `token ${token}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(bodyData)
-            });
+                const bodyData = {
+                    message: `Atualização cântico: ${titulo}`,
+                    content: conteudoBase64
+                };
+                if(sha) bodyData.sha = sha;
 
-            if(putRes.ok) {
-                alert("Biblioteca salva no GitHub com sucesso! ☁️");
-            } else {
-                const errData = await putRes.json();
-                alert(`Erro ao salvar (${putRes.status}): ${errData.message}`);
+                const putRes = await fetch(urlArquivo, {
+                    method: "PUT",
+                    headers: {
+                        "Authorization": `token ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(bodyData)
+                });
+
+                if(putRes.ok) {
+                    enviados++;
+                } else {
+                    erros++;
+                }
+            } catch (e) {
+                erros++;
             }
-        } catch (err) {
-            console.error("Erro ao salvar no GitHub:", err);
-            alert("Erro na conexão ao salvar no GitHub. Verifique a sua internet.");
+        }
+
+        if(erros === 0) {
+            alert(`Todos os ${enviados} cânticos foram salvos individualmente no GitHub! ☁️`);
+        } else {
+            alert(`Envio concluído: ${enviados} salvo(s) com sucesso, ${erros} erro(s).`);
         }
     }
 
