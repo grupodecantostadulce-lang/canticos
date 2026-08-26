@@ -183,7 +183,7 @@
 <div id="modal-github">
     <div class="modal-content-sm">
         <h3 style="margin:0; color:#2c3e50;">⚙️ Configuração do GitHub</h3>
-        <p style="margin:0; font-size:12px; color:#7f8c8d;">Insira os dados do repositório para salvar a biblioteca na nuvem:</p>
+        <p style="margin:0; font-size:12px; color:#7f8c8d;">Insira os dados exatos do seu repositório:</p>
         
         <input type="text" id="gh-user" placeholder="Usuário GitHub (ex: meunome)" class="input-data" style="border:1px solid #ccc; font-weight:normal;">
         <input type="text" id="gh-repo" placeholder="Nome do Repositório (ex: meurepertorio)" class="input-data" style="border:1px solid #ccc; font-weight:normal;">
@@ -208,7 +208,7 @@
 
     const regexAcordeGlobal = /\b[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?(?=\s|$)/g;
 
-    // ── MÓDULO DE INTEGRAÇÃO COM GITHUB ───────────────────────────
+    // ── MÓDULO DE INTEGRAÇÃO COM GITHUB (CORRIGIDO) ──────────────
     function abrirModalGitHub() {
         document.getElementById('gh-user').value = localStorage.getItem('gh_user') || '';
         document.getElementById('gh-repo').value = localStorage.getItem('gh_repo') || '';
@@ -237,38 +237,39 @@
         fecharModalGitHub();
     }
 
-    // Função para descarregar a biblioteca do GitHub (Baixar)
+    // Função para baixar os cânticos do GitHub
     async function carregarDoGitHub(notificarSucesso = false) {
         const user = localStorage.getItem('gh_user');
         const repo = localStorage.getItem('gh_repo');
+        const token = localStorage.getItem('gh_token');
 
         if(!user || !repo) return;
 
-        // URL para ler o ficheiro diretamente da API pública do GitHub
         const url = `https://api.github.com/repos/${user}/${repo}/contents/canticos.json`;
+        const headers = {};
+        if(token) headers["Authorization"] = `token ${token}`;
 
         try {
-            const res = await fetch(url);
+            const res = await fetch(url, { headers });
             if(res.ok) {
                 const data = await res.json();
-                // Decodifica o conteúdo Base64 retornado pelo GitHub
                 const conteudoTexto = decodeURIComponent(escape(atob(data.content)));
                 const canticosNuvem = JSON.parse(conteudoTexto);
 
                 db = canticosNuvem;
                 localStorage.setItem('cifras_v7', JSON.stringify(db));
                 renderMenu();
-                if(notificarSucesso) alert("Biblioteca atualizada com sucesso a partir do GitHub!");
-            } else if(notificarSucesso) {
-                alert("Ficheiro canticos.json não encontrado no repositório.");
+                if(notificarSucesso) alert("Biblioteca atualizada com sucesso a partir do GitHub! 🔄");
+            } else if(res.status === 404 && notificarSucesso) {
+                alert("O arquivo 'canticos.json' ainda não existe no repositório. Clique em '☁️ Enviar' para criar o arquivo inicial.");
             }
         } catch (err) {
             console.error("Erro ao carregar do GitHub:", err);
-            if(notificarSucesso) alert("Erro ao ligar ao GitHub. Verifique a sua ligação.");
+            if(notificarSucesso) alert("Erro de conexão ao carregar do GitHub.");
         }
     }
 
-    // Função para enviar os cânticos para o GitHub (Enviar)
+    // Função para enviar os cânticos para o GitHub
     async function salvarNoGitHub() {
         const user = localStorage.getItem('gh_user');
         const repo = localStorage.getItem('gh_repo');
@@ -282,27 +283,36 @@
         const url = `https://api.github.com/repos/${user}/${repo}/contents/canticos.json`;
 
         try {
-            // 1. Obter o SHA do ficheiro atual no GitHub (necessário para atualizar ficheiros existentes)
             let sha = "";
+            
+            // Tenta buscar o arquivo existente para obter o identificador 'sha'
             const getRes = await fetch(url, {
                 headers: { "Authorization": `token ${token}` }
             });
+
             if(getRes.ok) {
                 const getData = await getRes.json();
                 sha = getData.sha;
+            } else if (getRes.status === 404) {
+                // Se o arquivo ainda não existir, isso é normal. Prosseguimos sem 'sha' para criar um arquivo novo.
+                console.log("Arquivo 'canticos.json' não encontrado. Será criado um novo no GitHub.");
+            } else {
+                // Se der erro 401 ou 403, as credenciais estão incorretas
+                const errData = await getRes.json();
+                return alert(`Erro de acesso ao GitHub (${getRes.status}): ${errData.message}. Verifique o seu Usuário, Repositório e permissões do Token.`);
             }
 
-            // 2. Converte o objeto db em texto JSON e codifica em Base64
+            // Codifica o JSON da biblioteca para Base64
             const jsonTexto = JSON.stringify(db, null, 2);
             const conteudoBase64 = btoa(unescape(encodeURIComponent(jsonTexto)));
 
-            // 3. Prepara a requisição PUT para salvar no GitHub
             const bodyData = {
                 message: "Atualização da Biblioteca de Cânticos",
                 content: conteudoBase64
             };
-            if(sha) bodyData.sha = sha; // Inclui o SHA se o ficheiro já existir
+            if(sha) bodyData.sha = sha;
 
+            // Faz a chamada PUT para criar ou atualizar o arquivo
             const putRes = await fetch(url, {
                 method: "PUT",
                 headers: {
@@ -316,11 +326,11 @@
                 alert("Biblioteca salva no GitHub com sucesso! ☁️");
             } else {
                 const errData = await putRes.json();
-                alert("Erro ao salvar no GitHub: " + (errData.message || "Verifique o seu Token."));
+                alert(`Erro ao salvar (${putRes.status}): ${errData.message}`);
             }
         } catch (err) {
             console.error("Erro ao salvar no GitHub:", err);
-            alert("Erro na conexão ao salvar no GitHub.");
+            alert("Erro na conexão ao salvar no GitHub. Verifique a sua internet.");
         }
     }
 
@@ -924,9 +934,8 @@
         });
     }
 
-    // Inicialização da interface e tentativa automática de carregar do GitHub
     renderMenu();
-    carregarDoGitHub(false); // Tenta carregar sem emitir mensagens de aviso em caso de estar offline
+    carregarDoGitHub(false);
 </script>
 </body>
 </html>
