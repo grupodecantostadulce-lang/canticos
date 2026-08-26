@@ -50,7 +50,7 @@
         .btn-tom { background: #34495e; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; }
         
         /* Modais */
-        #modal-cadastro, #modal-duplicar { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:200; }
+        #modal-cadastro, #modal-duplicar, #modal-github { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:200; }
         .modal-content { background:white; padding:25px; border-radius:10px; width:750px; display:flex; flex-direction:column; gap:10px; }
         .modal-content-sm { background:white; padding:25px; border-radius:10px; width:380px; display:flex; flex-direction:column; gap:15px; }
 
@@ -79,6 +79,12 @@
             padding-top: 10px;
             border-top: 1px solid #455a64;
         }
+
+        /* Estilos do Painel de Sincronização GitHub */
+        .github-panel { background: #1a252f; padding: 10px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #f39c12; }
+        .btn-gh { background: #f39c12; color: white; padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; font-size: 12px; }
+        .btn-gh-sync { background: #2980b9; color: white; padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1; font-size: 11px; }
+        .gh-flex { display: flex; gap: 5px; margin-top: 5px; }
    </style>
 </head>
 <body>
@@ -86,6 +92,16 @@
 <div class="sidebar">
     <button class="btn-add" onclick="abrirModal()">+ Novo Cântico</button>
     
+    <!-- Painel GitHub -->
+    <div class="github-panel">
+        <div style="font-size: 12px; color: #f39c12; font-weight: bold; margin-bottom: 5px;">☁️ GitHub Cloud Sync</div>
+        <button class="btn-gh" onclick="abrirModalGitHub()">⚙️ Configurar GitHub</button>
+        <div class="gh-flex">
+            <button class="btn-gh-sync" style="background:#27ae60;" onclick="salvarNoGitHub()">☁️ Enviar</button>
+            <button class="btn-gh-sync" style="background:#8e44ad;" onclick="carregarDoGitHub(true)">🔄 Baixar</button>
+        </div>
+    </div>
+
     <h2>📅 Agenda do Repertório</h2>
     <div class="agenda-container">
         <input type="date" id="data-selecionada" class="input-data" onchange="atualizarDataDisplay(); atualizarDestaquesCalendario();">
@@ -163,6 +179,23 @@
     </div>
 </div>
 
+<!-- MODAL: Configurações do GitHub -->
+<div id="modal-github">
+    <div class="modal-content-sm">
+        <h3 style="margin:0; color:#2c3e50;">⚙️ Configuração do GitHub</h3>
+        <p style="margin:0; font-size:12px; color:#7f8c8d;">Insira os dados do repositório para salvar a biblioteca na nuvem:</p>
+        
+        <input type="text" id="gh-user" placeholder="Usuário GitHub (ex: meunome)" class="input-data" style="border:1px solid #ccc; font-weight:normal;">
+        <input type="text" id="gh-repo" placeholder="Nome do Repositório (ex: meurepertorio)" class="input-data" style="border:1px solid #ccc; font-weight:normal;">
+        <input type="password" id="gh-token" placeholder="Personal Access Token (ghp_...)" class="input-data" style="border:1px solid #ccc; font-weight:normal;">
+        
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button onclick="fecharModalGitHub()" style="background:#95a5a6; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer;">Cancelar</button>
+            <button onclick="salvarConfigGitHub()" style="background:#f39c12; color:white; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Salvar Dados</button>
+        </div>
+    </div>
+</div>
+
 <script src="docx.min.js"></script>
 <script src="FileSaver.min.js"></script>
 
@@ -175,6 +208,123 @@
 
     const regexAcordeGlobal = /\b[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?(?=\s|$)/g;
 
+    // ── MÓDULO DE INTEGRAÇÃO COM GITHUB ───────────────────────────
+    function abrirModalGitHub() {
+        document.getElementById('gh-user').value = localStorage.getItem('gh_user') || '';
+        document.getElementById('gh-repo').value = localStorage.getItem('gh_repo') || '';
+        document.getElementById('gh-token').value = localStorage.getItem('gh_token') || '';
+        document.getElementById('modal-github').style.display = 'flex';
+    }
+
+    function fecharModalGitHub() {
+        document.getElementById('modal-github').style.display = 'none';
+    }
+
+    function salvarConfigGitHub() {
+        const user = document.getElementById('gh-user').value.trim();
+        const repo = document.getElementById('gh-repo').value.trim();
+        const token = document.getElementById('gh-token').value.trim();
+
+        if(!user || !repo) {
+            return alert("Por favor, preencha pelo menos o Usuário e o Repositório!");
+        }
+
+        localStorage.setItem('gh_user', user);
+        localStorage.setItem('gh_repo', repo);
+        localStorage.setItem('gh_token', token);
+
+        alert("Configurações do GitHub salvas com sucesso!");
+        fecharModalGitHub();
+    }
+
+    // Função para descarregar a biblioteca do GitHub (Baixar)
+    async function carregarDoGitHub(notificarSucesso = false) {
+        const user = localStorage.getItem('gh_user');
+        const repo = localStorage.getItem('gh_repo');
+
+        if(!user || !repo) return;
+
+        // URL para ler o ficheiro diretamente da API pública do GitHub
+        const url = `https://api.github.com/repos/${user}/${repo}/contents/canticos.json`;
+
+        try {
+            const res = await fetch(url);
+            if(res.ok) {
+                const data = await res.json();
+                // Decodifica o conteúdo Base64 retornado pelo GitHub
+                const conteudoTexto = decodeURIComponent(escape(atob(data.content)));
+                const canticosNuvem = JSON.parse(conteudoTexto);
+
+                db = canticosNuvem;
+                localStorage.setItem('cifras_v7', JSON.stringify(db));
+                renderMenu();
+                if(notificarSucesso) alert("Biblioteca atualizada com sucesso a partir do GitHub!");
+            } else if(notificarSucesso) {
+                alert("Ficheiro canticos.json não encontrado no repositório.");
+            }
+        } catch (err) {
+            console.error("Erro ao carregar do GitHub:", err);
+            if(notificarSucesso) alert("Erro ao ligar ao GitHub. Verifique a sua ligação.");
+        }
+    }
+
+    // Função para enviar os cânticos para o GitHub (Enviar)
+    async function salvarNoGitHub() {
+        const user = localStorage.getItem('gh_user');
+        const repo = localStorage.getItem('gh_repo');
+        const token = localStorage.getItem('gh_token');
+
+        if(!user || !repo || !token) {
+            alert("Configure primeiro o seu Usuário, Repositório e Token no botão '⚙️ Configurar GitHub'.");
+            return abrirModalGitHub();
+        }
+
+        const url = `https://api.github.com/repos/${user}/${repo}/contents/canticos.json`;
+
+        try {
+            // 1. Obter o SHA do ficheiro atual no GitHub (necessário para atualizar ficheiros existentes)
+            let sha = "";
+            const getRes = await fetch(url, {
+                headers: { "Authorization": `token ${token}` }
+            });
+            if(getRes.ok) {
+                const getData = await getRes.json();
+                sha = getData.sha;
+            }
+
+            // 2. Converte o objeto db em texto JSON e codifica em Base64
+            const jsonTexto = JSON.stringify(db, null, 2);
+            const conteudoBase64 = btoa(unescape(encodeURIComponent(jsonTexto)));
+
+            // 3. Prepara a requisição PUT para salvar no GitHub
+            const bodyData = {
+                message: "Atualização da Biblioteca de Cânticos",
+                content: conteudoBase64
+            };
+            if(sha) bodyData.sha = sha; // Inclui o SHA se o ficheiro já existir
+
+            const putRes = await fetch(url, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `token ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(bodyData)
+            });
+
+            if(putRes.ok) {
+                alert("Biblioteca salva no GitHub com sucesso! ☁️");
+            } else {
+                const errData = await putRes.json();
+                alert("Erro ao salvar no GitHub: " + (errData.message || "Verifique o seu Token."));
+            }
+        } catch (err) {
+            console.error("Erro ao salvar no GitHub:", err);
+            alert("Erro na conexão ao salvar no GitHub.");
+        }
+    }
+
+    // ── LÓGICA EXISTENTE DO SISTEMA ───────────────────────────────
     function atualizarDataDisplay() {
         const dataVal = document.getElementById('data-selecionada').value;
         if(!dataVal) return;
@@ -270,7 +420,6 @@
         alert("Agenda salva!");
     }
 
-    // ── FUNÇÕES DE DUPLICAÇÃO VIA CALENDÁRIO ─────────────────
     function abrirModalDuplicar() {
         const dataOrigem = document.getElementById('data-selecionada').value;
 
@@ -312,7 +461,6 @@
         atualizarDestaquesCalendario();
     }
 
-    // ── PROCESSADOR INTELIGENTE DE CIFRAS/LETRAS ─────────────────
     function formatarTextoCifra(textoBruto) {
         const temp = document.createElement('div');
         temp.innerHTML = textoBruto;
@@ -349,7 +497,6 @@
         }).join('\n');
     }
 
-    // ── EXPORTAR PDF COM CIFRAS (CORRIGIDO SEM FOLHAS EM BRANCO) ──
     function gerarPDF() {
         const dataVal = document.getElementById('data-selecionada').value;
         if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
@@ -364,7 +511,6 @@
             const linkAudio = db[m.nome]?.link || "";
             const textoFormatado = formatarTextoCifra(m.htmlCifra);
 
-            // Usamos a classe CSS 'pdf-page' e a propriedade 'break-after: page' para controlar quebras
             htmlGeral += `
                <div class="pdf-page" style="box-sizing: border-box; padding: 5mm 8mm; break-after: page; page-break-after: always;">
                     <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:8px; padding-bottom:4px; font-family: Arial, sans-serif;">
@@ -379,7 +525,6 @@
 
         elementoPdf.innerHTML = htmlGeral;
 
-        // Opções ajustadas do html2pdf.js com 'pagebreak' controlado
         html2pdf().set({ 
             margin: [0, 0, 0, 0], 
             filename: `${dataVal}_Canticos-Cifrados.pdf`, 
@@ -389,7 +534,6 @@
         }).from(elementoPdf).save();
     }
 
-    // ── EXPORTAR DOCX LISTA COM LINKS ─────────────────────────────
     async function gerarPDFLista() {
         const dataVal = document.getElementById('data-selecionada').value;
         if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
@@ -476,7 +620,6 @@
         }
     }
 
-    // ── EXPORTAR DOCX SÓ LETRAS ───────────────────────────────────
     async function gerarPDFLetras() {
         const dataVal = document.getElementById('data-selecionada').value;
         if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
@@ -637,7 +780,6 @@
         }
     }
 
-    // ── BIBLIOTECA ────────────────────────────────────────────────
     function renderMenu(termo = '') {
         const lista = document.getElementById('lista-musicas');
         lista.innerHTML = '';
@@ -736,8 +878,6 @@
     function filtrarMusicas() { renderMenu(document.getElementById('busca-input').value); }
     function limparBusca() { document.getElementById('busca-input').value = ''; renderMenu(); }
 
-    renderMenu();
-
     function atualizarDestaquesCalendario() {
         const container = document.getElementById('lista-datas-destaque');
         const dataSelecionada = document.getElementById('data-selecionada').value;
@@ -783,6 +923,10 @@
             container.appendChild(btn);
         });
     }
+
+    // Inicialização da interface e tentativa automática de carregar do GitHub
+    renderMenu();
+    carregarDoGitHub(false); // Tenta carregar sem emitir mensagens de aviso em caso de estar offline
 </script>
 </body>
 </html>
