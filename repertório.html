@@ -199,8 +199,8 @@
 <!-- MODAL: Progresso do Carregamento -->
 <div id="modal-progresso">
     <div class="modal-content-sm" style="text-align: center;">
-        <h3 style="margin:0; color:#2c3e50;">☁️ A Enviar para o GitHub</h3>
-        <p id="progresso-status" style="margin:5px 0; font-size:13px; color:#555;">A preparar o envio...</p>
+        <h3 style="margin:0; color:#2c3e50;">☁️ Sincronização GitHub</h3>
+        <p id="progresso-status" style="margin:5px 0; font-size:13px; color:#555;">Verificando arquivos...</p>
         
         <!-- Barra de Progresso Visual -->
         <div class="progress-bar-container">
@@ -223,7 +223,7 @@
 
     const regexAcordeGlobal = /\b[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?(?=\s|$)/g;
 
-    // ── MÓDULO GITHUB E BARRA DE PROGRESSO ───────────────────────
+    // ── MÓDULO GITHUB: ENVIO INCREMENTAL / INCREMENTAL SYNC ──────────
 
     function normalizarNomeArquivo(titulo) {
         const semAcento = titulo.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -261,7 +261,6 @@
         fecharModalGitHub();
     }
 
-    // Funções de Controlo do Modal de Progresso
     function exibirProgresso(statusTexto, porcentagem) {
         document.getElementById('modal-progresso').style.display = 'flex';
         document.getElementById('progresso-status').innerText = statusTexto;
@@ -273,7 +272,7 @@
         document.getElementById('modal-progresso').style.display = 'none';
     }
 
-    // Envia os cânticos para o GitHub com indicação de percentagem
+    // OTIMIZAÇÃO: Envia SOMENTE os cânticos que ainda não estão salvos no GitHub
     async function salvarNoGitHub() {
         const user = localStorage.getItem('gh_user');
         const repo = localStorage.getItem('gh_repo');
@@ -285,26 +284,69 @@
         }
 
         const nomesCanticos = Object.keys(db);
-        const total = nomesCanticos.length;
-
-        if(total === 0) {
+        if(nomesCanticos.length === 0) {
             return alert("A biblioteca local está vazia. Adicione cânticos antes de enviar.");
         }
 
+        exibirProgresso("A consultar arquivos existentes no GitHub...", 0);
+
+        // PASSO 1: Obter a lista de arquivos já existentes no repositório com 1 única requisição
+        const urlPasta = `https://api.github.com/repos/${user}/${repo}/contents/canticos`;
+        let arquivosExistentesMap = {};
+
+        try {
+            const resPasta = await fetch(urlPasta, {
+                headers: { "Authorization": `token ${token}` }
+            });
+
+            if(resPasta.ok) {
+                const listaArquivos = await resPasta.json();
+                // Cria um mapa/dicionário com os nomes dos arquivos já salvos e seus SHAs
+                listaArquivos.forEach(f => {
+                    arquivosExistentesMap[f.name] = f.sha;
+                });
+            } else if(resPasta.status !== 404) {
+                fecharProgresso();
+                return alert(`Erro ao conectar ao GitHub (${resPasta.status}). Verifique seu Token e Repositório.`);
+            }
+        } catch(err) {
+            fecharProgresso();
+            return alert("Erro na conexão ao consultar o GitHub.");
+        }
+
+        // PASSO 2: Filtrar apenas cânticos locais que AINDA NÃO estão no GitHub
+        const canticosParaEnviar = [];
+
+        nomesCanticos.forEach(titulo => {
+            const nomeArquivo = normalizarNomeArquivo(titulo);
+            // Se o arquivo não existir no GitHub, adiciona para envio
+            if(!arquivosExistentesMap[nomeArquivo]) {
+                canticosParaEnviar.push(titulo);
+            }
+        });
+
+        // Se todos os cânticos já existirem no GitHub, encerra imediatamente!
+        if(canticosParaEnviar.length === 0) {
+            exibirProgresso("Tudo atualizado!", 100);
+            setTimeout(() => {
+                fecharProgresso();
+                alert("✨ Todos os cânticos já estão salvos no GitHub! Nenhum envio foi necessário.");
+            }, 400);
+            return;
+        }
+
+        // PASSO 3: Enviar apenas os cânticos pendentes
+        const totalParaEnviar = canticosParaEnviar.length;
         let enviados = 0;
         let erros = 0;
 
-        // Abre o modal de progresso no início
-        exibirProgresso("Iniciando envio...", 0);
-
-        for(let i = 0; i < total; i++) {
-            const titulo = nomesCanticos[i];
+        for(let i = 0; i < totalParaEnviar; i++) {
+            const titulo = canticosParaEnviar[i];
             const nomeArquivo = normalizarNomeArquivo(titulo);
             const urlArquivo = `https://api.github.com/repos/${user}/${repo}/contents/canticos/${nomeArquivo}`;
 
-            // Calcula e atualiza a percentagem na interface
-            const porcentagem = Math.round(((i) / total) * 100);
-            exibirProgresso(`Enviando (${i + 1} de ${total}): "${titulo}"`, porcentagem);
+            const porcentagem = Math.round(((i) / totalParaEnviar) * 100);
+            exibirProgresso(`Enviando novo (${i + 1} de ${totalParaEnviar}): "${titulo}"`, porcentagem);
 
             const conteudoObjeto = {
                 titulo: titulo,
@@ -315,22 +357,12 @@
             const jsonTexto = JSON.stringify(conteudoObjeto, null, 2);
             const conteudoBase64 = btoa(unescape(encodeURIComponent(jsonTexto)));
 
+            const bodyData = {
+                message: `Novo cântico: ${titulo}`,
+                content: conteudoBase64
+            };
+
             try {
-                let sha = "";
-                const getRes = await fetch(urlArquivo, {
-                    headers: { "Authorization": `token ${token}` }
-                });
-                if(getRes.ok) {
-                    const getData = await getRes.json();
-                    sha = getData.sha;
-                }
-
-                const bodyData = {
-                    message: `Atualização cântico: ${titulo}`,
-                    content: conteudoBase64
-                };
-                if(sha) bodyData.sha = sha;
-
                 const putRes = await fetch(urlArquivo, {
                     method: "PUT",
                     headers: {
@@ -350,21 +382,19 @@
             }
         }
 
-        // Finaliza com 100%
         exibirProgresso("Envio concluído!", 100);
 
-        // Aguarda meio segundo para o utilizador ver a barra cheia antes de fechar o modal
         setTimeout(() => {
             fecharProgresso();
             if(erros === 0) {
-                alert(`Todos os ${enviados} cânticos foram salvas no GitHub com sucesso! ☁️`);
+                alert(`Sucesso! ${enviados} novo(s) cântico(s) foi/foram adicionado(s) ao GitHub! ☁️`);
             } else {
-                alert(`Envio concluído: ${enviados} salvo(s) com sucesso, ${erros} erro(s).`);
+                alert(`Envio concluído: ${enviados} enviado(s) com sucesso, ${erros} erro(s).`);
             }
         }, 500);
     }
 
-    // Baixa todos os cânticos do GitHub
+    // Baixa os cânticos do GitHub
     async function carregarDoGitHub(notificarSucesso = false) {
         const user = localStorage.getItem('gh_user');
         const repo = localStorage.getItem('gh_repo');
@@ -397,15 +427,18 @@
 
             if(notificarSucesso) exibirProgresso("A baixar cânticos da nuvem...", 0);
 
-            let novaBiblioteca = {};
+            let novaBiblioteca = Object.assign({}, db); // Preserva a biblioteca atual
+            let novosBaixados = 0;
 
             for(let i = 0; i < total; i++) {
                 const file = arquivosJson[i];
+
                 if(notificarSucesso) {
                     const porcentagem = Math.round(((i + 1) / total) * 100);
-                    exibirProgresso(`A baixar (${i + 1} de ${total})...`, porcentagem);
+                    exibirProgresso(`Verificando cânticos (${i + 1} de ${total})...`, porcentagem);
                 }
 
+                // Faz o download do arquivo individual
                 const resFile = await fetch(file.download_url);
                 if(resFile.ok) {
                     const canticoObj = await resFile.json();
@@ -414,6 +447,7 @@
                             texto: canticoObj.texto,
                             link: canticoObj.link || ''
                         };
+                        novosBaixados++;
                     }
                 }
             }
@@ -424,7 +458,7 @@
 
             if(notificarSucesso) {
                 fecharProgresso();
-                alert(`Sucesso! ${Object.keys(db).length} cântico(s) baixado(s) do GitHub. 🔄`);
+                alert(`Sincronização concluída! Biblioteca atualizada com ${Object.keys(db).length} cântico(s). 🔄`);
             }
         } catch (err) {
             console.error("Erro ao carregar do GitHub:", err);
