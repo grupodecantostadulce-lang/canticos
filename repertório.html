@@ -102,8 +102,10 @@
         <button class="btn-gh" onclick="abrirModalGitHub()">⚙️ Configurar GitHub</button>
         <div class="gh-flex">
             <button class="btn-gh-sync" style="background:#27ae60;" onclick="salvarNoGitHub()">☁️ Enviar Cânticos</button>
-            <button class="btn-gh-sync" style="background:#8e44ad;" onclick="carregarDoGitHub(true)">🔄 Baixar Todos</button>
+            <button class="btn-gh-sync" style="background:#8e44ad;" onclick="carregarDoGitHub(true)">🔄 Baixar Novos</button>
         </div>
+        <!-- NOVO BOTÃO: Força a atualização e sobrescreve as versões locais pelas do GitHub -->
+        <button class="btn-gh" style="background:#c0392b; margin-top:5px;" onclick="forcarAtualizacaoDoGitHub()">⚡ Sobrescrever / Atualizar Todos</button>
     </div>
 
     <h2>📅 Agenda do Repertório</h2>
@@ -143,7 +145,6 @@
                 <div class="controles" id="controles-transposicao" style="margin-top: 25px;">
                     <button class="btn-tom" onclick="transpor(-1)">- Tom</button>
                     <button class="btn-tom" onclick="transpor(1)">+ Tom</button>
-                    <!-- NOVO BOTÃO: Permite salvar o novo tom localmente e sincronizar com o GitHub -->
                     <button class="btn-tom" style="background:#2980b9; margin-top: 8px;" onclick="salvarTomAlterado()">💾 Salvar Tom</button>
                     <button class="btn-tom" style="background:#f39c12; margin-top: 8px;" onclick="editarCanticoAtual()">✎ Editar Cântico</button>
                     <button class="btn-tom" style="background:#27ae60; margin-top: 8px;" onclick="adicionarAoRepertorio()">+ Add ao Repertório</button>
@@ -390,7 +391,7 @@
         }, 500);
     }
 
-    // Baixa os cânticos do GitHub
+    // Baixa SOMENTE os cânticos que NÃO estão salvos no computador
     async function carregarDoGitHub(notificarSucesso = false) {
         const user = localStorage.getItem('gh_user');
         const repo = localStorage.getItem('gh_repo');
@@ -414,31 +415,48 @@
 
             const arquivos = await resPasta.json();
             const arquivosJson = arquivos.filter(f => f.name.endsWith('.json'));
-            const total = arquivosJson.length;
 
-            if(total === 0) {
+            if(arquivosJson.length === 0) {
                 if(notificarSucesso) alert("Nenhum cântico encontrado na pasta 'canticos/'.");
                 return;
             }
 
-            if(notificarSucesso) exibirProgresso("A baixar cânticos da nuvem...", 0);
+            const arquivosLocaisSet = new Set();
+            Object.keys(db).forEach(titulo => {
+                arquivosLocaisSet.add(normalizarNomeArquivo(titulo));
+            });
 
-            let novaBiblioteca = Object.assign({}, db);
+            const arquivosParaBaixar = arquivosJson.filter(f => !arquivosLocaisSet.has(f.name));
+
+            if(arquivosParaBaixar.length === 0) {
+                if(notificarSucesso) {
+                    exibirProgresso("Biblioteca atualizada!", 100);
+                    setTimeout(() => {
+                        fecharProgresso();
+                        alert("✨ Todos os cânticos do GitHub já estão salvos no seu computador!");
+                    }, 400);
+                }
+                return;
+            }
+
+            if(notificarSucesso) exibirProgresso("A baixar cânticos novos da nuvem...", 0);
+
+            const totalParaBaixar = arquivosParaBaixar.length;
             let novosBaixados = 0;
 
-            for(let i = 0; i < total; i++) {
-                const file = arquivosJson[i];
+            for(let i = 0; i < totalParaBaixar; i++) {
+                const file = arquivosParaBaixar[i];
 
                 if(notificarSucesso) {
-                    const porcentagem = Math.round(((i + 1) / total) * 100);
-                    exibirProgresso(`Verificando cânticos (${i + 1} de ${total})...`, porcentagem);
+                    const porcentagem = Math.round(((i + 1) / totalParaBaixar) * 100);
+                    exibirProgresso(`Baixando novo (${i + 1} de ${totalParaBaixar})...`, porcentagem);
                 }
 
                 const resFile = await fetch(file.download_url);
                 if(resFile.ok) {
                     const canticoObj = await resFile.json();
                     if(canticoObj.titulo && canticoObj.texto) {
-                        novaBiblioteca[canticoObj.titulo] = {
+                        db[canticoObj.titulo] = {
                             texto: canticoObj.texto,
                             link: canticoObj.link || ''
                         };
@@ -447,13 +465,12 @@
                 }
             }
 
-            db = novaBiblioteca;
             localStorage.setItem('cifras_v7', JSON.stringify(db));
             renderMenu();
 
             if(notificarSucesso) {
                 fecharProgresso();
-                alert(`Sincronização concluída! Biblioteca atualizada com ${Object.keys(db).length} cântico(s). 🔄`);
+                alert(`Sincronização concluída! ${novosBaixados} novo(s) cântico(s) baixado(s) para o seu computador. 🔄`);
             }
         } catch (err) {
             console.error("Erro ao carregar do GitHub:", err);
@@ -464,12 +481,85 @@
         }
     }
 
-    // ── NOVA FUNÇÃO: SALVAR TOM ALTERADO LOCALMENTE E NO GITHUB ───────
+    // ── NOVA FUNÇÃO: FORÇA A ATUALIZAÇÃO DE TODOS OS CÂNTICOS (SOBRESCREVE O LOCAL) ──
+    async function forcarAtualizacaoDoGitHub() {
+        const user = localStorage.getItem('gh_user');
+        const repo = localStorage.getItem('gh_repo');
+        const token = localStorage.getItem('gh_token');
 
-    /**
-     * Esta função captura o texto atual no visor (que possui os acordes transpostos),
-     * atualiza o armazenamento local (localStorage) e envia/atualiza o arquivo no GitHub.
-     */
+        if(!user || !repo) {
+            alert("Configure primeiro o seu Usuário, Repositório e Token no botão '⚙️ Configurar GitHub'.");
+            return abrirModalGitHub();
+        }
+
+        const confirmacao = confirm("⚠️ Tem certeza que deseja atualizar TODOS os cânticos?\n\nEsta ação vai sobrescrever a versão local do seu computador pelas versões salvas no GitHub.");
+        if(!confirmacao) return;
+
+        const urlPasta = `https://api.github.com/repos/${user}/${repo}/contents/canticos`;
+        const headers = {};
+        if(token) headers["Authorization"] = `token ${token}`;
+
+        try {
+            exibirProgresso("A verificar repositório do GitHub...", 0);
+            const resPasta = await fetch(urlPasta, { headers });
+            
+            if(!resPasta.ok) {
+                fecharProgresso();
+                return alert(`Erro ao conectar ao GitHub (${resPasta.status}). Verifique as suas configurações.`);
+            }
+
+            const arquivos = await resPasta.json();
+            const arquivosJson = arquivos.filter(f => f.name.endsWith('.json'));
+            const total = arquivosJson.length;
+
+            if(total === 0) {
+                fecharProgresso();
+                return alert("Nenhum cântico encontrado na pasta 'canticos/'.");
+            }
+
+            let atualizados = 0;
+
+            for(let i = 0; i < total; i++) {
+                const file = arquivosJson[i];
+                const porcentagem = Math.round(((i + 1) / total) * 100);
+                exibirProgresso(`Sobrescrevendo (${i + 1} de ${total}): ${file.name}...`, porcentagem);
+
+                const resFile = await fetch(file.download_url);
+                if(resFile.ok) {
+                    const canticoObj = await resFile.json();
+                    if(canticoObj.titulo && canticoObj.texto) {
+                        // Sobrescreve/Atualiza no objeto db local
+                        db[canticoObj.titulo] = {
+                            texto: canticoObj.texto,
+                            link: canticoObj.link || ''
+                        };
+                        atualizados++;
+                    }
+                }
+            }
+
+            // Atualiza o armazenamento local
+            localStorage.setItem('cifras_v7', JSON.stringify(db));
+            renderMenu();
+
+            // Se houver uma música sendo exibida na tela, atualiza a exibição
+            const tituloAtual = document.getElementById('titulo-musica').innerText;
+            if(tituloAtual !== "Inicie seu Repertório" && db[tituloAtual]) {
+                exibir(tituloAtual);
+            }
+
+            fecharProgresso();
+            alert(`✨ Forçar atualização concluída!\n${atualizados} cântico(s) atualizado(s) com sucesso a partir do GitHub.`);
+
+        } catch (err) {
+            console.error("Erro ao forçar atualização:", err);
+            fecharProgresso();
+            alert("Erro de conexão ao tentar atualizar os cânticos do GitHub.");
+        }
+    }
+
+    // ── FUNÇÃO: SALVAR TOM ALTERADO LOCALMENTE E NO GITHUB ───────
+
     async function salvarTomAlterado() {
         const titulo = document.getElementById('titulo-musica').innerText;
         
@@ -477,20 +567,16 @@
             return alert("Selecione um cântico válido antes de salvar o tom!");
         }
 
-        // 1. Extrair o texto limpo do visor (sem HTML)
         const visor = document.getElementById('visor-cifra');
         const novoTexto = visor.innerText || visor.textContent;
 
-        // 2. Atualizar no banco de dados local
         db[titulo].texto = novoTexto;
         localStorage.setItem('cifras_v7', JSON.stringify(db));
 
-        // 3. Tentar atualizar no GitHub
         const user = localStorage.getItem('gh_user');
         const repo = localStorage.getItem('gh_repo');
         const token = localStorage.getItem('gh_token');
 
-        // Se o usuário não tiver configurado o GitHub, salva apenas localmente
         if (!user || !repo || !token) {
             alert(`Tom do cântico "${titulo}" salvo localmente com sucesso! 💾\n(Para salvar também no GitHub, configure o seu token no painel lateral).`);
             return;
@@ -502,7 +588,6 @@
         const urlArquivo = `https://api.github.com/repos/${user}/${repo}/contents/canticos/${nomeArquivo}`;
 
         try {
-            // Verificar se o arquivo já existe no GitHub para obter o seu SHA (necessário para atualizar)
             let sha = "";
             const getRes = await fetch(urlArquivo, {
                 headers: { "Authorization": `token ${token}` }
@@ -513,7 +598,6 @@
                 sha = getData.sha;
             }
 
-            // Preparar o conteúdo JSON
             const conteudoObjeto = {
                 titulo: titulo,
                 texto: novoTexto,
@@ -529,7 +613,6 @@
             };
             if (sha) bodyData.sha = sha;
 
-            // Enviar requisição PUT para o GitHub
             const putRes = await fetch(urlArquivo, {
                 method: "PUT",
                 headers: {
@@ -964,7 +1047,7 @@
                     return;
                 }
 
-                const ehMarcadorRefrao = /^(\[?\s*(refr[aã]o|refrão|chorus|r\.?|bis|ponte)\s*:?\]?)$/i.test(linhaLimpa);
+                const ehMarcadorRefrao = /^(\[?\s*(refr[aã]o\vert{}refrão\vert{}chorus\vert{}r\.?\vert{}bis\vert{}ponte)\s*:?\]?)$/i.test(linhaLimpa);
                 if (ehMarcadorRefrao) {
                     emRefrao = true;
                 }
