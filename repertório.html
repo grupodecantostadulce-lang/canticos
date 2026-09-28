@@ -92,7 +92,7 @@
         .progress-bar-container { width: 100%; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; height: 20px; margin-top: 10px; }
         .progress-bar-fill { height: 100%; width: 0%; background-color: #27ae60; transition: width 0.3s ease; }
 
-        /* ── REGRAS DE RESPONSIVIDADE PARA TABLETS E CELULARES (Menor que 900px) ── */
+        /* REGRAS DE RESPONSIVIDADE PARA TABLETS E CELULARES (Menor que 900px) */
         @media screen and (max-width: 900px) {
             body {
                 flex-direction: column;
@@ -100,7 +100,6 @@
                 height: auto;
             }
 
-            /* Reduz o menu lateral para ocupar o topo sem bloquear a tela */
             .sidebar {
                 width: 100%;
                 max-height: 280px;
@@ -119,7 +118,6 @@
                 border-radius: 8px;
             }
 
-            /* Ajusta cabeçalho e player em telas menores */
             .header-flex {
                 flex-direction: column;
                 align-items: center;
@@ -131,7 +129,6 @@
                 max-width: 320px;
             }
 
-            /* Garante que o texto da cifra seja legível e não ultrapasse os limites */
             #visor-cifra {
                 font-size: 14px;
                 white-space: pre-wrap;
@@ -277,7 +274,9 @@
     let repertorioAtual = [];
     let dragIndex = null;
 
-    const regexAcordeGlobal = /\b[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?(?=\s|$)/g;
+    // EXPRESSÃO REGULAR DE ACORDES ATUALIZADA:
+    // Agora aceita notas soltas com sustenido (#), cerquilha, asteriscos (*) e parênteses () nos acordes (ex: Bm7(11), C#*, G#)
+    const regexAcordeGlobal = /\b[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?\*?/g;
 
     // ── MÓDULO GITHUB ──────────────────────────────────────────────────
 
@@ -328,7 +327,6 @@
         document.getElementById('modal-progresso').style.display = 'none';
     }
 
-    // Envia SOMENTE os cânticos que ainda não estão salvos no GitHub
     async function salvarNoGitHub() {
         const user = localStorage.getItem('gh_user');
         const repo = localStorage.getItem('gh_repo');
@@ -444,7 +442,6 @@
         }, 500);
     }
 
-    // Baixa SOMENTE os cânticos que NÃO estão salvos no computador
     async function carregarDoGitHub(notificarSucesso = false) {
         const user = localStorage.getItem('gh_user');
         const repo = localStorage.getItem('gh_repo');
@@ -534,7 +531,6 @@
         }
     }
 
-    // FORÇA A ATUALIZAÇÃO DE TODOS OS CÂNTICOS (SOBRESCREVE O LOCAL)
     async function forcarAtualizacaoDoGitHub() {
         const user = localStorage.getItem('gh_user');
         const repo = localStorage.getItem('gh_repo');
@@ -607,8 +603,6 @@
             alert("Erro de conexão ao tentar atualizar os cânticos do GitHub.");
         }
     }
-
-    // SALVAR TOM ALTERADO LOCALMENTE E NO GITHUB
 
     async function salvarTomAlterado() {
         const titulo = document.getElementById('titulo-musica').innerText;
@@ -827,6 +821,7 @@
         atualizarDestaquesCalendario();
     }
 
+    // FUNÇÃO FORMATAR TEXTO DA CIFRA AJUSTADA:
     function formatarTextoCifra(textoBruto) {
         const temp = document.createElement('div');
         temp.innerHTML = textoBruto;
@@ -845,8 +840,11 @@
             let qtdPalavrasTexto = 0;
 
             palavrasSemNumeros.forEach(palavra => {
-                const limpa = palavra.replace(/[\,\.\:\!\?\(\)\[\]]/g, '');
-                const ehAcorde = /^([A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?)$/.test(limpa);
+                // Remove pontuações gerais da palavra para teste, MAS preserva '(', ')', '#', e '*'
+                const limpa = palavra.replace(/[\,\.\:\!\?\[\]]/g, '');
+                
+                // Regex de checagem do acorde individual:
+                const ehAcorde = /^([A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?\*?)$/.test(limpa);
                 
                 if (ehAcorde) {
                     qtdAcordes++;
@@ -855,10 +853,12 @@
                 }
             });
 
+            // Se existirem palavras de letra de música na linha, ela é tratada como texto comum
             if (qtdPalavrasTexto > 0) {
                 return linha;
             }
 
+            // Aplica a tag <b> com a cor vermelha em todos os acordes e símbolos da linha de cifra
             return linha.replace(regexAcordeGlobal, '<b style="color: #e74c3c;">$&</b>');
         }).join('\n');
     }
