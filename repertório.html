@@ -34,6 +34,18 @@
         .repertorio-item.dragging { opacity: 0.5; background: #34495e; transform: scale(0.95); }
         .repertorio-item.drag-over { border-top: 2px solid #3498db; }
 
+        /* Estilo do título clicável do cântico na agenda */
+        .repertorio-titulo-click {
+            flex: 1;
+            cursor: pointer;
+            padding-right: 5px;
+            transition: color 0.2s;
+        }
+        .repertorio-titulo-click:hover {
+            color: #3498db;
+            text-decoration: underline;
+        }
+
         .controles-ordem { display: flex; gap: 4px; align-items: center; }
         .btn-ordem { background: #1a252f; color: white; border: 1px solid #555; border-radius: 3px; cursor: pointer; padding: 2px 6px; font-size: 11px; }
 
@@ -274,8 +286,6 @@
     let repertorioAtual = [];
     let dragIndex = null;
 
-    // EXPRESSÃO REGULAR DE ACORDES ATUALIZADA:
-    // Agora aceita notas soltas com sustenido (#), cerquilha, asteriscos (*) e parênteses () nos acordes (ex: Bm7(11), C#*, G#)
     const regexAcordeGlobal = /\b[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?\*?/g;
 
     // ── MÓDULO GITHUB ──────────────────────────────────────────────────
@@ -709,6 +719,7 @@
         abrirModal(true, nome);
     }
 
+    // FUNÇÃO ATUALIZADA: Permite clicar no nome do cântico da agenda para exibi-lo ao lado
     function atualizarListaRepertorioUI() {
         const lista = document.getElementById('lista-repertorio');
         lista.innerHTML = '';
@@ -718,8 +729,9 @@
             item.draggable = true;
             item.dataset.index = i;
             
+            // O span com classe 'repertorio-titulo-click' chama a função exibir(m.nome) ao ser clicado
             item.innerHTML = `
-                <span style="flex:1;">${i+1}. ${m.nome}</span>
+                <span class="repertorio-titulo-click" onclick="exibir('${m.nome.replace(/'/g, "\\'")}')" title="Clique para abrir no visor ao lado">${i+1}. ${m.nome}</span>
                 <div class="controles-ordem">
                     <button class="btn-ordem" onclick="moverCanto(${i}, -1)">▲</button>
                     <button class="btn-ordem" onclick="moverCanto(${i}, 1)">▼</button>
@@ -821,7 +833,6 @@
         atualizarDestaquesCalendario();
     }
 
-    // FUNÇÃO FORMATAR TEXTO DA CIFRA AJUSTADA:
     function formatarTextoCifra(textoBruto) {
         const temp = document.createElement('div');
         temp.innerHTML = textoBruto;
@@ -840,10 +851,7 @@
             let qtdPalavrasTexto = 0;
 
             palavrasSemNumeros.forEach(palavra => {
-                // Remove pontuações gerais da palavra para teste, MAS preserva '(', ')', '#', e '*'
                 const limpa = palavra.replace(/[\,\.\:\!\?\[\]]/g, '');
-                
-                // Regex de checagem do acorde individual:
                 const ehAcorde = /^([A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?\*?)$/.test(limpa);
                 
                 if (ehAcorde) {
@@ -853,12 +861,10 @@
                 }
             });
 
-            // Se existirem palavras de letra de música na linha, ela é tratada como texto comum
             if (qtdPalavrasTexto > 0) {
                 return linha;
             }
 
-            // Aplica a tag <b> com a cor vermelha em todos os acordes e símbolos da linha de cifra
             return linha.replace(regexAcordeGlobal, '<b style="color: #e74c3c;">$&</b>');
         }).join('\n');
     }
@@ -1097,7 +1103,7 @@
                     return;
                 }
 
-                const ehMarcadorRefrao = /^(\[?\s*(refr[aã]o\vert{}refrão\vert{}chorus\vert{}r\.?\vert{}bis\vert{}ponte)\s*:?\]?)$/i.test(linhaLimpa);
+                const ehMarcadorRefrao = /^(\[?\s*(refr[aã]o|refrão|chorus|r\.?|bis|ponte)\s*:?\]?)$/i.test(linhaLimpa);
                 if (ehMarcadorRefrao) {
                     emRefrao = true;
                 }
