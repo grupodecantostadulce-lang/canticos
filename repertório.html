@@ -286,8 +286,10 @@
     let repertorioAtual = [];
     let dragIndex = null;
 
-    const regexAcordeGlobal = /\b[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?\*?/g;
-
+    // EXPRESSÃO REGULAR DE ACORDES ATUALIZADA:
+    // Agora aceita notas soltas com sustenido (#), cerquilha, asteriscos (*) e parênteses () nos acordes (ex: Bm7(11), C#*, G#)
+    const regexAcordeGlobal = /\b[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?\*?/g;                           
+  
     // ── MÓDULO GITHUB ──────────────────────────────────────────────────
 
     function normalizarNomeArquivo(titulo) {
