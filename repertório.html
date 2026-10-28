@@ -49,18 +49,8 @@
         .controles-ordem { display: flex; gap: 4px; align-items: center; }
         .btn-ordem { background: #1a252f; color: white; border: 1px solid #555; border-radius: 3px; cursor: pointer; padding: 2px 6px; font-size: 11px; }
 
-        /* Área Principal de Conteúdo - Ajustado para Scroll Eficiente */
-        .main-content { 
-            flex: 1; 
-            padding: 20px; 
-            overflow-y: auto; 
-            height: 100vh;
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            box-sizing: border-box; 
-            position: relative; 
-        }
+        /* Área Principal de Conteúdo */
+        .main-content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; position: relative; scroll-behavior: smooth; }
         .container { width: 100%; max-width: 950px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); box-sizing: border-box; }
 
         .header-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 25px; border-bottom: 2px solid #f0f2f5; padding-bottom: 20px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -160,7 +150,7 @@
         @media screen and (max-width: 900px) {
             body { flex-direction: column; overflow-y: auto; height: auto; }
             .sidebar { width: 100%; max-height: 280px; border-right: none; border-bottom: 5px solid #1a252f; padding: 10px; }
-            .main-content { padding: 10px; width: 100%; height: auto; overflow-y: visible; }
+            .main-content { padding: 10px; width: 100%; }
             .container { padding: 15px; border-radius: 8px; }
             .header-flex { flex-direction: column; align-items: center; gap: 15px; }
             #player-embed-container { width: 100%; max-width: 320px; }
@@ -342,9 +332,9 @@
         document.getElementById('display-tamanho-fonte').innerText = `${tamanhoFonteAtual}px`;
     }
 
-    // 2. AUTO-SCROLL (CORRIGIDO)
+    // 2. AUTO-SCROLL
     let scrollTimer = null;
-    let velocidadeScroll = 50; // Intervalo em milissegundos
+    let velocidadeScroll = 50; // Intervalo em ms (quanto menor, mais rápido)
 
     function alternarAutoScroll() {
         const btn = document.getElementById('btn-autoscroll-play');
@@ -369,21 +359,13 @@
         }
     }
 
-    // Lógica universal de rolagem
     function executarScroll() {
         const painel = document.getElementById('painel-principal-conteudo');
-        const posAnteriorPanel = painel.scrollTop;
-        const posAnteriorWindow = window.scrollY;
+        const posAtual = painel.scrollTop;
+        painel.scrollTop += 1;
 
-        // Rola o container do painel e a página inteira
-        painel.scrollBy(0, 1);
-        window.scrollBy(0, 1);
-
-        // Verifica se a rolagem estagnou (chegou ao fim da página)
-        const panelChegouAoFim = (painel.scrollTop === posAnteriorPanel && painel.scrollTop > 0);
-        const windowChegouAoFim = (window.innerHeight + window.scrollY) >= document.body.offsetHeight;
-
-        if (panelChegouAoFim || windowChegouAoFim) {
+        // Se chegou ao fim do scroll, para automaticamente
+        if (painel.scrollTop === posAtual && painel.scrollTop > 0) {
             pararAutoScroll();
         }
     }
@@ -391,7 +373,7 @@
     function alterarVelocidadeScroll(deltaMs) {
         velocidadeScroll = Math.max(10, Math.min(150, velocidadeScroll + deltaMs));
         
-        // Exibe um nível intuitivo de 1 a 10
+        // Mapeia visualmente para uma escala simples de 1 a 10
         const nivelVisual = Math.round((160 - velocidadeScroll) / 14);
         document.getElementById('display-velocidade-scroll').innerText = `Vel: ${nivelVisual}`;
 
@@ -426,6 +408,7 @@
     };
 
     function gerarSVGAcorde(nomeAcorde) {
+        // Limpa parênteses e barras para busca no dicionário
         const nomeLimpo = nomeAcorde.replace(/[\(\)]/g, '').split('/')[0].trim();
         const dados = bibliotecaAcordesSVG[nomeLimpo];
 
@@ -437,17 +420,20 @@
         const height = 120;
         let svg = `<svg width="${width}" height="${height}" viewBox="0 0 110 120" xmlns="http://www.w3.org/2000/svg">`;
         
+        // Desenho das 5 casas (linhas horizontais)
         for (let i = 0; i <= 4; i++) {
             const y = 25 + i * 20;
             const strokeWidth = (i === 0 && dados.base === 1) ? 4 : 1;
             svg += `<line x1="20" y1="${y}" x2="90" y2="${y}" stroke="#333" stroke-width="${strokeWidth}"/>`;
         }
 
+        // Desenho das 6 cordas (linhas verticais)
         for (let i = 0; i < 6; i++) {
             const x = 20 + i * 14;
             svg += `<line x1="${x}" y1="25" x2="${x}" y2="105" stroke="#666" stroke-width="1"/>`;
         }
 
+        // Pestana (se existir)
         if (dados.barre) {
             const y = 25 + (dados.barre.fret - dados.base) * 20 + 10;
             const x1 = 20 + (dados.barre.from - 1) * 14;
@@ -455,14 +441,18 @@
             svg += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#e74c3c" stroke-width="8" stroke-linecap="round"/>`;
         }
 
+        // Marcadores das cordas (Dedos / X / O)
         dados.frets.forEach((fret, stringIdx) => {
             const x = 20 + stringIdx * 14;
 
             if (fret === -1) {
+                // Corda não tocada (X)
                 svg += `<text x="${x}" y="15" font-size="11" text-anchor="middle" fill="#c0392b" font-weight="bold">✕</text>`;
             } else if (fret === 0) {
+                // Corda solta (O)
                 svg += `<circle cx="${x}" cy="12" r="3.5" stroke="#27ae60" stroke-width="1.5" fill="none"/>`;
             } else {
+                // Posição do dedo
                 const y = 25 + (fret - dados.base) * 20 + 10;
                 svg += `<circle cx="${x}" cy="${y}" r="5.5" fill="#e74c3c"/>`;
             }
@@ -683,4 +673,831 @@
             const arquivos = await resPasta.json();
             const arquivosJson = arquivos.filter(f => f.name.endsWith('.json'));
 
-            if
+            if(arquivosJson.length === 0) {
+                if(notificarSucesso) alert("Nenhum cântico encontrado na pasta 'canticos/'.");
+                return;
+            }
+
+            const arquivosLocaisSet = new Set();
+            Object.keys(db).forEach(titulo => {
+                arquivosLocaisSet.add(normalizarNomeArquivo(titulo));
+            });
+
+            const arquivosParaBaixar = arquivosJson.filter(f => !arquivosLocaisSet.has(f.name));
+
+            if(arquivosParaBaixar.length === 0) {
+                if(notificarSucesso) {
+                    exibirProgresso("Biblioteca atualizada!", 100);
+                    setTimeout(() => {
+                        fecharProgresso();
+                        alert("✨ Todos os cânticos do GitHub já estão salvos no seu computador!");
+                    }, 400);
+                }
+                return;
+            }
+
+            if(notificarSucesso) exibirProgresso("A baixar cânticos novos da nuvem...", 0);
+
+            const totalParaBaixar = arquivosParaBaixar.length;
+            let novosBaixados = 0;
+
+            for(let i = 0; i < totalParaBaixar; i++) {
+                const file = arquivosParaBaixar[i];
+
+                if(notificarSucesso) {
+                    const porcentagem = Math.round(((i + 1) / totalParaBaixar) * 100);
+                    exibirProgresso(`Baixando novo (${i + 1} de ${totalParaBaixar})...`, porcentagem);
+                }
+
+                const resFile = await fetch(file.download_url);
+                if(resFile.ok) {
+                    const canticoObj = await resFile.json();
+                    if(canticoObj.titulo && canticoObj.texto) {
+                        db[canticoObj.titulo] = {
+                            texto: canticoObj.texto,
+                            link: canticoObj.link || ''
+                        };
+                        novosBaixados++;
+                    }
+                }
+            }
+
+            localStorage.setItem('cifras_v7', JSON.stringify(db));
+            renderMenu();
+
+            if(notificarSucesso) {
+                fecharProgresso();
+                alert(`Sincronização concluída! ${novosBaixados} novo(s) cântico(s) baixado(s) para o seu computador. 🔄`);
+            }
+        } catch (err) {
+            console.error("Erro ao carregar do GitHub:", err);
+            if(notificarSucesso) {
+                fecharProgresso();
+                alert("Erro de conexão ao carregar do GitHub.");
+            }
+        }
+    }
+
+    async function forcarAtualizacaoDoGitHub() {
+        const user = localStorage.getItem('gh_user');
+        const repo = localStorage.getItem('gh_repo');
+        const token = localStorage.getItem('gh_token');
+
+        if(!user || !repo) {
+            alert("Configure primeiro o seu Usuário, Repositório e Token no botão '⚙️ Configurar GitHub'.");
+            return abrirModalGitHub();
+        }
+
+        const confirmacao = confirm("⚠️ Tem certeza que deseja atualizar TODOS os cânticos?\n\nEsta ação vai sobrescrever a versão local do seu computador pelas versões salvas no GitHub.");
+        if(!confirmacao) return;
+
+        const urlPasta = `https://api.github.com/repos/${user}/${repo}/contents/canticos`;
+        const headers = {};
+        if(token) headers["Authorization"] = `token ${token}`;
+
+        try {
+            exibirProgresso("A verificar repositório do GitHub...", 0);
+            const resPasta = await fetch(urlPasta, { headers });
+            
+            if(!resPasta.ok) {
+                fecharProgresso();
+                return alert(`Erro ao conectar ao GitHub (${resPasta.status}). Verifique as suas configurações.`);
+            }
+
+            const arquivos = await resPasta.json();
+            const arquivosJson = arquivos.filter(f => f.name.endsWith('.json'));
+            const total = arquivosJson.length;
+
+            if(total === 0) {
+                fecharProgresso();
+                return alert("Nenhum cântico encontrado na pasta 'canticos/'.");
+            }
+
+            let atualizados = 0;
+
+            for(let i = 0; i < total; i++) {
+                const file = arquivosJson[i];
+                const porcentagem = Math.round(((i + 1) / total) * 100);
+                exibirProgresso(`Sobrescrevendo (${i + 1} de ${total}): ${file.name}...`, porcentagem);
+
+                const resFile = await fetch(file.download_url);
+                if(resFile.ok) {
+                    const canticoObj = await resFile.json();
+                    if(canticoObj.titulo && canticoObj.texto) {
+                        db[canticoObj.titulo] = {
+                            texto: canticoObj.texto,
+                            link: canticoObj.link || ''
+                        };
+                        atualizados++;
+                    }
+                }
+            }
+
+            localStorage.setItem('cifras_v7', JSON.stringify(db));
+            renderMenu();
+
+            const tituloAtual = document.getElementById('titulo-musica').innerText;
+            if(tituloAtual !== "Inicie seu Repertório" && db[tituloAtual]) {
+                exibir(tituloAtual);
+            }
+
+            fecharProgresso();
+            alert(`✨ Forçar atualização concluída!\n${atualizados} cântico(s) atualizado(s) com sucesso a partir do GitHub.`);
+
+        } catch (err) {
+            console.error("Erro ao forçar atualização:", err);
+            fecharProgresso();
+            alert("Erro de conexão ao tentar atualizar os cânticos do GitHub.");
+        }
+    }
+
+    async function salvarTomAlterado() {
+        const titulo = document.getElementById('titulo-musica').innerText;
+        
+        if (titulo === "Inicie seu Repertório" || !db[titulo]) {
+            return alert("Selecione um cântico válido antes de salvar o tom!");
+        }
+
+        const visor = document.getElementById('visor-cifra');
+        const novoTexto = visor.innerText || visor.textContent;
+
+        db[titulo].texto = novoTexto;
+        localStorage.setItem('cifras_v7', JSON.stringify(db));
+
+        const user = localStorage.getItem('gh_user');
+        const repo = localStorage.getItem('gh_repo');
+        const token = localStorage.getItem('gh_token');
+
+        if (!user || !repo || !token) {
+            alert(`Tom do cântico "${titulo}" salvo localmente com sucesso! 💾\n(Para salvar também no GitHub, configure o seu token no painel lateral).`);
+            return;
+        }
+
+        exibirProgresso(`Atualizando tom de "${titulo}" no GitHub...`, 50);
+
+        const nomeArquivo = normalizarNomeArquivo(titulo);
+        const urlArquivo = `https://api.github.com/repos/${user}/${repo}/contents/canticos/${nomeArquivo}`;
+
+        try {
+            let sha = "";
+            const getRes = await fetch(urlArquivo, {
+                headers: { "Authorization": `token ${token}` }
+            });
+
+            if (getRes.ok) {
+                const getData = await getRes.json();
+                sha = getData.sha;
+            }
+
+            const conteudoObjeto = {
+                titulo: titulo,
+                texto: novoTexto,
+                link: db[titulo].link || ''
+            };
+
+            const jsonTexto = JSON.stringify(conteudoObjeto, null, 2);
+            const conteudoBase64 = btoa(unescape(encodeURIComponent(jsonTexto)));
+
+            const bodyData = {
+                message: `Alteração de tom do cântico: ${titulo}`,
+                content: conteudoBase64
+            };
+            if (sha) bodyData.sha = sha;
+
+            const putRes = await fetch(urlArquivo, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `token ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(bodyData)
+            });
+
+            exibirProgresso("Concluído!", 100);
+
+            setTimeout(() => {
+                fecharProgresso();
+                if (putRes.ok) {
+                    alert(`✨ Tom do cântico "${titulo}" salvo localmente e atualizado no GitHub com sucesso!`);
+                } else {
+                    alert(`Tom salvo localmente, mas ocorreu um erro ao atualizar no GitHub (${putRes.status}).`);
+                }
+            }, 400);
+
+        } catch (error) {
+            console.error("Erro ao atualizar no GitHub:", error);
+            fecharProgresso();
+            alert(`Tom salvo localmente! Falha de conexão ao enviar para o GitHub.`);
+        }
+    }
+
+    // ── LÓGICA EXISTENTE DO SISTEMA ───────────────────────────────
+    function atualizarDataDisplay() {
+        const dataVal = document.getElementById('data-selecionada').value;
+        if(!dataVal) return;
+        const dataObj = new Date(dataVal + 'T12:00:00');
+        document.getElementById('dia-semana-display').innerText = dataObj.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' });
+        repertorioAtual = agendas[dataVal] || [];
+        atualizarListaRepertorioUI();
+    }
+
+    function adicionarAoRepertorio() {
+        const nome = document.getElementById('titulo-musica').innerText;
+        if(nome === "Inicie seu Repertório") return;
+        const htmlCifra = document.getElementById('visor-cifra').innerHTML;
+        repertorioAtual.push({ nome, htmlCifra });
+        atualizarListaRepertorioUI();
+    }
+
+    function editarCanticoAtual() {
+        const nome = document.getElementById('titulo-musica').innerText;
+        if (nome === "Inicie seu Repertório") return alert("Selecione um cântico primeiro!");
+        if (!db[nome]) return alert("Cântico não encontrado na biblioteca!");
+        abrirModal(true, nome);
+    }
+
+    function atualizarListaRepertorioUI() {
+        const lista = document.getElementById('lista-repertorio');
+        lista.innerHTML = '';
+        repertorioAtual.forEach((m, i) => {
+            const item = document.createElement('div');
+            item.className = 'repertorio-item';
+            item.draggable = true;
+            item.dataset.index = i;
+            
+            item.innerHTML = `
+                <span class="repertorio-titulo-click" onclick="exibir('${m.nome.replace(/'/g, "\\'")}')" title="Clique para abrir no visor ao lado">${i+1}. ${m.nome}</span>
+                <div class="controles-ordem">
+                    <button class="btn-ordem" onclick="moverCanto(${i}, -1)">▲</button>
+                    <button class="btn-ordem" onclick="moverCanto(${i}, 1)">▼</button>
+                    <button onclick="removerDoRepertorio(${i})" style="background:none; border:none; color:#ff7675; cursor:pointer; margin-left:5px;">✕</button>
+                </div>
+            `;
+
+            item.addEventListener('dragstart', (e) => {
+                dragIndex = i;
+                item.classList.add('dragging');
+            });
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                dragIndex = null;
+                document.querySelectorAll('.repertorio-item').forEach(el => el.classList.remove('drag-over'));
+            });
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                item.classList.add('drag-over');
+            });
+            item.addEventListener('dragleave', () => {
+                item.classList.remove('drag-over');
+            });
+            item.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const targetIndex = i;
+                if (dragIndex !== null && dragIndex !== targetIndex) {
+                    const movedItem = repertorioAtual.splice(dragIndex, 1)[0];
+                    repertorioAtual.splice(targetIndex, 0, movedItem);
+                    atualizarListaRepertorioUI();
+                }
+            });
+
+            lista.appendChild(item);
+        });
+    }
+
+    function moverCanto(index, direcao) {
+        const novoIndex = index + direcao;
+        if (novoIndex >= 0 && novoIndex < repertorioAtual.length) {
+            const temp = repertorioAtual[index];
+            repertorioAtual[index] = repertorioAtual[novoIndex];
+            repertorioAtual[novoIndex] = temp;
+            atualizarListaRepertorioUI();
+        }
+    }
+
+    function removerDoRepertorio(i) {
+        repertorioAtual.splice(i, 1);
+        atualizarListaRepertorioUI();
+    }
+
+    function salvarAgenda() {
+        const dataVal = document.getElementById('data-selecionada').value;
+        if(!dataVal) return alert("Selecione uma data!");
+        agendas[dataVal] = repertorioAtual;
+        localStorage.setItem('agendas_v7', JSON.stringify(agendas));
+        alert("Agenda salva!");
+    }
+
+    function abrirModalDuplicar() {
+        const dataOrigem = document.getElementById('data-selecionada').value;
+
+        if (!dataOrigem) {
+            return alert("Por favor, selecione primeiro a data que deseja duplicar!");
+        }
+        if (repertorioAtual.length === 0) {
+            return alert("A agenda da data selecionada está vazia!");
+        }
+
+        document.getElementById('data-destino-duplicar').value = '';
+        document.getElementById('modal-duplicar').style.display = 'flex';
+    }
+
+    function fecharModalDuplicar() {
+        document.getElementById('modal-duplicar').style.display = 'none';
+    }
+
+    function confirmarDuplicacao() {
+        const novaData = document.getElementById('data-destino-duplicar').value;
+
+        if (!novaData) {
+            return alert("Selecione a data de destino no calendário!");
+        }
+
+        const dataOrigem = document.getElementById('data-selecionada').value;
+        if (novaData === dataOrigem) {
+            return alert("A data de destino deve ser diferente da data de origem!");
+        }
+
+        agendas[novaData] = JSON.parse(JSON.stringify(repertorioAtual));
+        localStorage.setItem('agendas_v7', JSON.stringify(agendas));
+
+        alert(`Sucesso! Repertório copiado para a nova data.`);
+        fecharModalDuplicar();
+
+        document.getElementById('data-selecionada').value = novaData;
+        atualizarDataDisplay();
+        atualizarDestaquesCalendario();
+    }
+
+    function formatarTextoCifra(textoBruto) {
+        const temp = document.createElement('div');
+        temp.innerHTML = textoBruto;
+        const textoLimpo = temp.innerText || temp.textContent;
+
+        return textoLimpo.split('\n').map(linha => {
+            const linhaTrim = linha.trim();
+            if (!linhaTrim) return linha;
+
+            const palavras = linhaTrim.split(/\s+/);
+            const palavrasSemNumeros = palavras.filter(p => !/^\d+[\.\)]?$/.test(p));
+
+            if (palavrasSemNumeros.length === 0) return linha;
+
+            let qtdAcordes = 0;
+            let qtdPalavrasTexto = 0;
+
+            palavrasSemNumeros.forEach(palavra => {
+                const limpa = palavra.replace(/[\,\.\:\!\?\[\]]/g, '');
+                const ehAcorde = /^\(?[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/(?:[A-G][#b]?|\d+))?(?:º|°)?\*?\)?$/.test(limpa);
+                
+                if (ehAcorde) {
+                    qtdAcordes++;
+                } else if (limpa.length >= 2 || !/^[A-G]$/.test(limpa)) {
+                    qtdPalavrasTexto++;
+                }
+            });
+
+            if (qtdPalavrasTexto > 0) {
+                return linha;
+            }
+
+            return linha.replace(regexAcordeGlobal, '<b style="color: #e74c3c;">$&</b>');
+        }).join('\n');
+    }
+
+    function gerarPDF() {
+        const dataVal = document.getElementById('data-selecionada').value;
+        if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
+        const displayData = document.getElementById('dia-semana-display').innerText;
+
+        const elementoPdf = document.createElement('div');
+        elementoPdf.style.cssText = 'padding: 0; font-family: "Consolas", "Monaco", "Courier New", monospace; font-size: 10pt; color: #000;';
+
+        let htmlGeral = '';
+
+        repertorioAtual.forEach((m, index) => {
+            const linkAudio = db[m.nome]?.link || "";
+            const textoFormatado = formatarTextoCifra(m.htmlCifra);
+
+            htmlGeral += `
+               <div class="pdf-page" style="box-sizing: border-box; padding: 5mm 8mm; break-after: page; page-break-after: always;">
+                    <div style="text-align:center; border-bottom:1.5px solid #000; margin-bottom:8px; padding-bottom:4px; font-family: Arial, sans-serif;">
+                        <h1 style="margin:0; font-size:13pt; text-transform:uppercase;">Repertório de Cifras</h1>
+                        <p style="margin:2px 0; font-size:12pt; color:#444;">${displayData}</p>
+                    </div>
+                    <h2 style="font-family: Arial, sans-serif; margin: 0 0 3px 0; font-size: 12pt;">${index + 1}. ${m.nome}</h2>
+                    ${linkAudio ? `<div style="margin-bottom: 6px; font-family: Arial, sans-serif; font-size: 12pt;"><a href="${linkAudio}" target="_blank" style="color: #c0392b; text-decoration: underline; font-weight: bold;">Ouvir no YouTube</a></div>` : ''}
+                    <div style="border-top: 1px solid #000; padding-top: 8px; column-count: 2; column-gap: 8mm; column-fill: auto; max-height: 235mm; white-space: pre; font-size: 12pt; line-height: 1.25;">${textoFormatado}</div>
+                </div>`;
+        });
+
+        elementoPdf.innerHTML = htmlGeral;
+
+        html2pdf().set({ 
+            margin: [0, 0, 0, 0], 
+            filename: `${dataVal}_Canticos-Cifrados.pdf`, 
+            html2canvas: { scale: 2, useCORS: true }, 
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'], avoid: 'div.pdf-page' }
+        }).from(elementoPdf).save();
+    }
+
+    async function gerarPDFLista() {
+        const dataVal = document.getElementById('data-selecionada').value;
+        if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
+        const displayData = document.getElementById('dia-semana-display').innerText;
+
+        if (typeof docx === 'undefined') {
+            return alert("Biblioteca docx.js não carregou. Verifique os arquivos na pasta.");
+        }
+
+        const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, UnderlineType } = docx;
+        const paragraphs = [];
+
+        paragraphs.push(
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                border: {
+                    bottom: { style: BorderStyle.SINGLE, size: 12, color: "000000", space: 6 }
+                },
+                spacing: { before: 0, after: 200 },
+                children: [
+                    new TextRun({
+                        text: `CÂNTICOS ${displayData.toUpperCase()}`,
+                        bold: true,
+                        size: 28,
+                        font: "Arial",
+                    })
+                ]
+            })
+        );
+
+        repertorioAtual.forEach((m, index) => {
+            const link = (db[m.nome] && db[m.nome].link) ? db[m.nome].link.trim() : '';
+            const numero = String(index + 1).padStart(2, '0');
+
+            paragraphs.push(
+                new Paragraph({
+                    spacing: { before: 160, after: 40 },
+                    children: [
+                        new TextRun({
+                            text: `${numero} ${m.nome.toUpperCase()}`,
+                            bold: true,
+                            size: 26,
+                            font: "Arial",
+                        })
+                    ]
+                })
+            );
+
+            paragraphs.push(
+                new Paragraph({
+                    spacing: { before: 0, after: 80 },
+                    children: [
+                        new TextRun({
+                            text: link ? link : 'Sem link de áudio',
+                            size: 22,
+                            font: "Arial",
+                            color: link ? "1a0dab" : "999999",
+                            italics: !link,
+                            underline: link ? { type: UnderlineType.SINGLE, color: "1a0dab" } : undefined,
+                        })
+                    ]
+                })
+            );
+        });
+
+        const doc = new Document({
+            sections: [{
+                properties: {
+                    page: {
+                        size: { width: 11906, height: 16838 },
+                        margin: { top: 1000, bottom: 1000, left: 1200, right: 1200 }
+                    }
+                },
+                children: paragraphs,
+            }]
+        });
+
+        try {
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, `${dataVal}-Lista-Canticos.docx`);
+        } catch (err) {
+            console.error("Erro ao gerar DOCX:", err);
+            alert("Erro ao gerar arquivo: " + err.message);
+        }
+    }
+
+    async function gerarPDFLetras() {
+        const dataVal = document.getElementById('data-selecionada').value;
+        if (repertorioAtual.length === 0) return alert("Adicione cânticos ao repertório!");
+        const displayData = document.getElementById('dia-semana-display').innerText;
+
+        if (typeof docx === 'undefined') {
+            return alert("Biblioteca docx.js não carregou. Verifique os arquivos na pasta.");
+        }
+
+        const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, SectionType } = docx;
+        const paragraphs = [];
+
+        paragraphs.push(
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                border: {
+                    bottom: { style: BorderStyle.SINGLE, size: 12, color: "000000", space: 4 }
+                },
+                spacing: { before: 0, after: 140 },
+                children: [
+                    new TextRun({
+                        text: "REPERTÓRIO DE CANTOS",
+                        bold: true,
+                        size: 28,
+                        font: "Arial",
+                    })
+                ]
+            }),
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 0, after: 280 },
+                children: [
+                    new TextRun({
+                        text: displayData.toUpperCase(),
+                        size: 22,
+                        font: "Arial",
+                        color: "444444",
+                    })
+                ]
+            })
+        );
+
+        repertorioAtual.forEach((m, index) => {
+            function extrairLetraComQuebras(htmlCifra) {
+                const temp = document.createElement('div');
+                temp.innerHTML = htmlCifra
+                    .replace(/<br\s*\/?>/gi, '\n')
+                    .replace(/<\/div>\s*<div/gi, '\n<div')
+                    .replace(/<\/p>\s*<p/gi, '\n<p');
+
+                function percorrerNos(no) {
+                    let resultado = '';
+                    no.childNodes.forEach(filho => {
+                        if (filho.nodeType === Node.TEXT_NODE) {
+                            resultado += filho.textContent;
+                        } else if (filho.nodeName === 'BR') {
+                            resultado += '\n';
+                        } else if (['DIV','P','LI'].includes(filho.nodeName)) {
+                            const conteudo = percorrerNos(filho);
+                            resultado += (resultado && !resultado.endsWith('\n') ? '\n' : '') + conteudo;
+                        } else {
+                            resultado += percorrerNos(filho);
+                        }
+                    });
+                    return resultado;
+                }
+
+                const textoCompleto = percorrerNos(temp);
+                const acordePattern = /^\s*([A-G][#b]?(m|maj|dim|aug|sus|add|7|9|11|13|º|°|\/[A-G][#b]?)*\s*)+\s*$/i;
+                return textoCompleto
+                    .split('\n')
+                    .filter(l => !acordePattern.test(l))
+                    .join('\n');
+            }
+
+            const letra = extrairLetraComQuebras(m.htmlCifra).toUpperCase();
+            const linhas = letra.split('\n');
+
+            paragraphs.push(
+                new Paragraph({
+                    spacing: { before: 200, after: 60 },
+                    border: {
+                        bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000", space: 2 }
+                    },
+                    children: [
+                        new TextRun({
+                            text: `${index + 1}. ${m.nome.toUpperCase()}`,
+                            bold: true,
+                            size: 24,
+                            font: "Arial",
+                        })
+                    ]
+                })
+            );
+
+            let emRefrao = false;
+
+            linhas.forEach((linha) => {
+                const linhaLimpa = linha.trim();
+
+                if (linhaLimpa === '') {
+                    emRefrao = false;
+                    paragraphs.push(
+                        new Paragraph({
+                            spacing: { before: 0, after: 100 },
+                            children: [new TextRun({ text: ' ', size: 24, font: "Arial" })]
+                        })
+                    );
+                    return;
+                }
+
+                const ehMarcadorRefrao = /^(\[?\s*(refr[aã]o|refrão|chorus|r\.?|bis|ponte)\s*:?\]?)$/i.test(linhaLimpa);
+                if (ehMarcadorRefrao) {
+                    emRefrao = true;
+                }
+
+                paragraphs.push(
+                    new Paragraph({
+                        alignment: AlignmentType.JUSTIFIED,
+                        spacing: { before: 0, after: 0, line: 240 },
+                        children: [
+                            new TextRun({
+                                text: linhaLimpa,
+                                size: 24,
+                                font: "Arial",
+                                bold: emRefrao,
+                            })
+                        ]
+                    })
+                );
+            });
+        });
+
+        const doc = new Document({
+            sections: [{
+                properties: {
+                    page: {
+                        size: { width: 11906, height: 16838 },
+                        margin: { top: 720, bottom: 720, left: 720, right: 720 }
+                    },
+                    column: {
+                        count: 2,
+                        space: 720,
+                        separate: true,
+                    },
+                    type: SectionType.CONTINUOUS,
+                },
+                children: paragraphs,
+            }]
+        });
+
+        try {
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, `${dataVal}-Letras-dos-Canticos.docx`);
+        } catch (err) {
+            console.error("Erro ao gerar DOCX:", err);
+            alert("Erro ao gerar arquivo: " + err.message);
+        }
+    }
+
+    function renderMenu(termo = '') {
+        const lista = document.getElementById('lista-musicas');
+        lista.innerHTML = '';
+        Object.keys(db).sort().forEach(nome => {
+            if (nome.toLowerCase().includes(termo.toLowerCase())) {
+                const item = document.createElement('div');
+                item.className = 'musica-item';
+                item.innerHTML = `<span>${nome}</span><div><button onclick="event.stopPropagation(); deletar('${nome}')">✖</button></div>`;
+                item.onclick = () => exibir(nome);
+                lista.appendChild(item);
+            }
+        });
+    }
+
+    function exibir(nome) {
+        pararAutoScroll(); // Para o scroll anterior se houver troca de música
+        
+        const tituloElemento = document.getElementById('titulo-musica');
+        const playerContainer = document.getElementById('player-embed-container');
+        const visor = document.getElementById('visor-cifra');
+        
+        tituloElemento.innerText = nome;
+        const m = db[nome];
+        if (!m) return;
+        
+        const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+        const ytMatch = (m.link || '').match(regExp);
+        if (ytMatch) {
+            playerContainer.style.display = 'block';
+            playerContainer.innerHTML = `<iframe width="320" height="180" src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen></iframe>`;
+        } else {
+            playerContainer.style.display = 'none';
+        }
+
+        const textoProcessado = formatarTextoCifra(m.texto);
+        visor.innerHTML = textoProcessado.replace(/<b style="color: #e74c3c;">(.*?)<\/b>/g, '<span class="acorde">$1</span>');
+        
+        // Ativa os eventos do Dicionário de Acordes nos elementos criados
+        vincularEventosPopover();
+    }
+
+    function abrirModal(edit = false, id = '') {
+        document.getElementById('modal-cadastro').style.display = 'flex';
+        if(edit) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('novo-titulo').value = id;
+            document.getElementById('novo-link').value = db[id].link || '';
+            document.getElementById('novo-texto').value = db[id].texto;
+        } else {
+            document.getElementById('edit-id').value = '';
+            document.getElementById('novo-titulo').value = '';
+            document.getElementById('novo-link').value = '';
+            document.getElementById('novo-texto').value = '';
+        }
+    }
+
+    function fecharModal() { document.getElementById('modal-cadastro').style.display = 'none'; }
+    
+    function salvar() {
+        const tit = document.getElementById('novo-titulo').value;
+        const txt = document.getElementById('novo-texto').value;
+        const link = document.getElementById('novo-link').value;
+        const old = document.getElementById('edit-id').value;
+
+        if (!tit || !txt) return alert("Preencha título e conteúdo!");
+
+        if (old && old !== tit) delete db[old];
+
+        db[tit] = { texto: txt, link: link };
+
+        localStorage.setItem('cifras_v7', JSON.stringify(db)); 
+        fecharModal(); 
+        renderMenu(); 
+        exibir(tit);
+    }
+    
+    function deletar(n) {
+        if(confirm(`Excluir ${n}?`)) {
+            delete db[n];
+            localStorage.setItem('cifras_v7', JSON.stringify(db));
+            renderMenu();
+        }
+    }
+
+    function transpor(s) {
+        document.querySelectorAll('.acorde').forEach(el => {
+            let acordeNovo = el.innerText.replace(/[A-G][#b]?/g, function(notaBase) {
+                const mapa = {"Db":"C#","Eb":"D#","Gb":"F#","Ab":"G#","Bb":"A#"};
+                let notaConvertida = mapa[notaBase] || notaBase;
+                
+                let idx = (escala.indexOf(notaConvertida) + s) % 12;
+                if(idx < 0) idx += 12;
+                
+                return escala[idx];
+            });
+            
+            el.innerText = acordeNovo;
+        });
+    }
+
+    function filtrarMusicas() { renderMenu(document.getElementById('busca-input').value); }
+    function limparBusca() { document.getElementById('busca-input').value = ''; renderMenu(); }
+
+    function atualizarDestaquesCalendario() {
+        const container = document.getElementById('lista-datas-destaque');
+        const dataSelecionada = document.getElementById('data-selecionada').value;
+        container.innerHTML = '';
+        
+        let mesFiltro, anoFiltro;
+        if (dataSelecionada) {
+            const partes = dataSelecionada.split('-');
+            anoFiltro = partes[0];
+            mesFiltro = partes[1];
+        } else {
+            const hoje = new Date();
+            anoFiltro = hoje.getFullYear().toString();
+            mesFiltro = (hoje.getMonth() + 1).toString().padStart(2, '0');
+        }
+
+        const datasFiltradas = Object.keys(agendas).filter(data => {
+            const [ano, mes] = data.split('-');
+            return agendas[data].length > 0 && ano === anoFiltro && mes === mesFiltro;
+        });
+
+        const nomesMeses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+        const legenda = document.querySelector('#container-datas-salvas small');
+        if (legenda) {
+            legenda.innerText = `Repertórios de ${nomesMeses[parseInt(mesFiltro) - 1]}:`;
+        }
+
+        if (datasFiltradas.length === 0) {
+            container.innerHTML = '<small style="color: #7f8c8d; font-style: italic;">Nenhum neste mês.</small>';
+            return;
+        }
+
+        datasFiltradas.sort().forEach(data => {
+            const btn = document.createElement('button');
+            btn.className = 'badge-data';
+            const [ano, mes, dia] = data.split('-');
+            btn.innerText = dia;
+            btn.title = `Abrir repertório do dia ${dia}/${mes}/${ano}`;
+            btn.onclick = () => {
+                document.getElementById('data-selecionada').value = data;
+                atualizarDataDisplay();
+            };
+            container.appendChild(btn);
+        });
+    }
+
+    renderMenu();
+    carregarDoGitHub(false);
+</script>
+</body>
+</html>
