@@ -49,7 +49,7 @@
         .controles-ordem { display: flex; gap: 4px; align-items: center; }
         .btn-ordem { background: #1a252f; color: white; border: 1px solid #555; border-radius: 3px; cursor: pointer; padding: 2px 6px; font-size: 11px; }
 
-        /* Area Principal de Conteúdo */
+        /* Área Principal de Conteúdo */
         .main-content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
         .container { width: 100%; max-width: 950px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); box-sizing: border-box; }
 
@@ -104,55 +104,18 @@
         .progress-bar-container { width: 100%; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; height: 20px; margin-top: 10px; }
         .progress-bar-fill { height: 100%; width: 0%; background-color: #27ae60; transition: width 0.3s ease; }
 
-        /* REGRAS DE RESPONSIVIDADE PARA TABLETS E CELULARES (Menor que 900px) */
+        /* Responsividade */
         @media screen and (max-width: 900px) {
-            body {
-                flex-direction: column;
-                overflow-y: auto;
-                height: auto;
-            }
-
-            .sidebar {
-                width: 100%;
-                max-height: 280px;
-                border-right: none;
-                border-bottom: 5px solid #1a252f;
-                padding: 10px;
-            }
-
-            .main-content {
-                padding: 10px;
-                width: 100%;
-            }
-
-            .container {
-                padding: 15px;
-                border-radius: 8px;
-            }
-
-            .header-flex {
-                flex-direction: column;
-                align-items: center;
-                gap: 15px;
-            }
-
-            #player-embed-container {
-                width: 100%;
-                max-width: 320px;
-            }
-
-            #visor-cifra {
-                font-size: 14px;
-                white-space: pre-wrap;
-            }
-
-            .btn-tom {
-                padding: 6px 10px;
-                font-size: 12px;
-                margin-bottom: 5px;
-            }
+            body { flex-direction: column; overflow-y: auto; height: auto; }
+            .sidebar { width: 100%; max-height: 280px; border-right: none; border-bottom: 5px solid #1a252f; padding: 10px; }
+            .main-content { padding: 10px; width: 100%; }
+            .container { padding: 15px; border-radius: 8px; }
+            .header-flex { flex-direction: column; align-items: center; gap: 15px; }
+            #player-embed-container { width: 100%; max-width: 320px; }
+            #visor-cifra { font-size: 14px; white-space: pre-wrap; }
+            .btn-tom { padding: 6px 10px; font-size: 12px; margin-bottom: 5px; }
         }
-   </style>
+    </style>
 </head>
 <body>
 
@@ -267,7 +230,6 @@
         <h3 style="margin:0; color:#2c3e50;">☁️ Sincronização GitHub</h3>
         <p id="progresso-status" style="margin:5px 0; font-size:13px; color:#555;">Verificando arquivos...</p>
         
-        <!-- Barra de Progresso Visual -->
         <div class="progress-bar-container">
             <div id="progress-bar-fill" class="progress-bar-fill"></div>
         </div>
@@ -287,8 +249,8 @@
     let dragIndex = null;
 
     // EXPRESSÃO REGULAR DE ACORDES ATUALIZADA:
-    // Agora aceita notas soltas com sustenido (#), cerquilha, asteriscos (*) e parênteses () nos acordes (ex: Bm7(11), C#*, G#)
-    const regexAcordeGlobal = /\b[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?\*?/g;                           
+    // Suporta acordes entre parênteses opcionais, baixos com números (ex: F6/4) e extensões.
+    const regexAcordeGlobal = /\(?[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/(?:[A-G][#b]?|\d+))?(?:º|°)?\*?\)?/g;                           
   
     // ── MÓDULO GITHUB ──────────────────────────────────────────────────
 
@@ -721,7 +683,6 @@
         abrirModal(true, nome);
     }
 
-    // FUNÇÃO ATUALIZADA: Permite clicar no nome do cântico da agenda para exibi-lo ao lado
     function atualizarListaRepertorioUI() {
         const lista = document.getElementById('lista-repertorio');
         lista.innerHTML = '';
@@ -731,7 +692,6 @@
             item.draggable = true;
             item.dataset.index = i;
             
-            // O span com classe 'repertorio-titulo-click' chama a função exibir(m.nome) ao ser clicado
             item.innerHTML = `
                 <span class="repertorio-titulo-click" onclick="exibir('${m.nome.replace(/'/g, "\\'")}')" title="Clique para abrir no visor ao lado">${i+1}. ${m.nome}</span>
                 <div class="controles-ordem">
@@ -835,6 +795,7 @@
         atualizarDestaquesCalendario();
     }
 
+    // FUNÇÃO CORRIGIDA: Reconhecimento de acordes entre parênteses e baixos numéricos
     function formatarTextoCifra(textoBruto) {
         const temp = document.createElement('div');
         temp.innerHTML = textoBruto;
@@ -853,8 +814,11 @@
             let qtdPalavrasTexto = 0;
 
             palavrasSemNumeros.forEach(palavra => {
+                // Remove pontuações de final de frase mantendo parênteses
                 const limpa = palavra.replace(/[\,\.\:\!\?\[\]]/g, '');
-                const ehAcorde = /^([A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/[A-G][#b]?)?(?:º|°)?\*?)$/.test(limpa);
+                
+                // Regra atualizada: aceita parênteses em volta do acorde inteiro e baixos com números (ex: F6/4 ou (C7))
+                const ehAcorde = /^\(?[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/(?:[A-G][#b]?|\d+))?(?:º|°)?\*?\)?$/.test(limpa);
                 
                 if (ehAcorde) {
                     qtdAcordes++;
@@ -863,10 +827,12 @@
                 }
             });
 
+            // Se existirem palavras que são texto comum na linha, não a considerarmos linha de cifras pura
             if (qtdPalavrasTexto > 0) {
                 return linha;
             }
 
+            // Destaca os acordes encontrados mantendo os parênteses
             return linha.replace(regexAcordeGlobal, '<b style="color: #e74c3c;">$&</b>');
         }).join('\n');
     }
