@@ -50,18 +50,60 @@
         .btn-ordem { background: #1a252f; color: white; border: 1px solid #555; border-radius: 3px; cursor: pointer; padding: 2px 6px; font-size: 11px; }
 
         /* Área Principal de Conteúdo */
-        .main-content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
+        .main-content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; position: relative; scroll-behavior: smooth; }
         .container { width: 100%; max-width: 950px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); box-sizing: border-box; }
 
         .header-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 25px; border-bottom: 2px solid #f0f2f5; padding-bottom: 20px; margin-bottom: 20px; flex-wrap: wrap; }
         #player-embed-container { width: 320px; height: 180px; background: #000; border-radius: 8px; overflow: hidden; display: none; flex-shrink: 0; }
 
-        #visor-cifra { white-space: pre-wrap; word-break: break-word; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 16px; line-height: 1.5; color: #000; }
-        .acorde { color: #e74c3c; font-weight: bold; background: #fdf2f2; border-radius: 3px; padding: 0 2px; }
+        /* Barra de Ferramentas da Cifra (Fonte e Auto-Scroll) */
+        .barra-ferramentas-cifra {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #e9ecef;
+        }
+        .grupo-ferramenta { display: flex; align-items: center; gap: 5px; }
+        .grupo-label { font-size: 12px; font-weight: bold; color: #7f8c8d; margin-right: 5px; }
+
+        #visor-cifra { white-space: pre-wrap; word-break: break-word; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 16px; line-height: 1.5; color: #000; position: relative; }
+        .acorde { 
+            color: #e74c3c; 
+            font-weight: bold; 
+            background: #fdf2f2; 
+            border-radius: 3px; 
+            padding: 0 2px; 
+            cursor: pointer;
+            position: relative;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+        .acorde:hover { background: #fadbd8; }
 
         .btn-add { background: #27ae60; color: white; width: 100%; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
         .btn-pdf { background: #c0392b; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        .btn-tom { background: #34495e; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; }
+        .btn-tom { background: #34495e; color: white; padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 500; }
+        .btn-tom:hover { opacity: 0.9; }
+
+        /* Popover Dicionário de Acordes */
+        #popover-acorde {
+            display: none;
+            position: absolute;
+            z-index: 1000;
+            background: #ffffff;
+            border: 2px solid #34495e;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            text-align: center;
+            pointer-events: none;
+        }
+        #popover-acorde h4 { margin: 0 0 5px 0; color: #2c3e50; font-size: 14px; font-family: sans-serif; }
         
         /* Modais */
         #modal-cadastro, #modal-duplicar, #modal-github, #modal-progresso { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:200; }
@@ -162,7 +204,7 @@
     <div id="lista-musicas"></div>
 </div>
 
-<div class="main-content">
+<div class="main-content" id="painel-principal-conteudo">
     <div class="container">
         <div class="header-flex">
             <div style="flex: 1; text-align: left;">
@@ -177,8 +219,36 @@
             </div>
             <div id="player-embed-container"></div>
         </div>
+
+        <!-- BARRA DE FERRAMENTAS: FONTE & AUTO-SCROLL -->
+        <div class="barra-ferramentas-cifra">
+            <div class="grupo-ferramenta">
+                <span class="grupo-label">🔤 Fonte:</span>
+                <button class="btn-tom" style="background:#7f8c8d; padding:4px 10px;" onclick="alterarTamanhoFonte(-2)">A-</button>
+                <span id="display-tamanho-fonte" style="font-size: 12px; font-weight: bold; min-width: 35px; text-align: center;">16px</span>
+                <button class="btn-tom" style="background:#7f8c8d; padding:4px 10px;" onclick="alterarTamanhoFonte(2)">A+</button>
+            </div>
+
+            <div style="height: 20px; border-left: 1px solid #ccc; margin: 0 5px;"></div>
+
+            <div class="grupo-ferramenta">
+                <span class="grupo-label">📜 Auto-Scroll:</span>
+                <button class="btn-tom" id="btn-autoscroll-play" style="background:#27ae60; padding:4px 12px;" onclick="alternarAutoScroll()">▶ Iniciar</button>
+                <button class="btn-tom" style="background:#e67e22; padding:4px 8px;" onclick="alterarVelocidadeScroll(10)">➖</button>
+                <span id="display-velocidade-scroll" style="font-size: 12px; font-weight: bold; min-width: 50px; text-align: center;">Vel: 3</span>
+                <button class="btn-tom" style="background:#27ae60; padding:4px 8px;" onclick="alterarVelocidadeScroll(-10)">➕</button>
+            </div>
+        </div>
+
+        <!-- Visor da Cifra -->
         <div id="visor-cifra">Selecione um cântico ao lado.</div>
     </div>
+</div>
+
+<!-- POPOVER: Dicionário Visual de Acordes -->
+<div id="popover-acorde">
+    <h4 id="popover-nome-acorde">Acorde</h4>
+    <div id="popover-svg-container"></div>
 </div>
 
 <!-- Modal de Cadastro/Edição de Cântico -->
@@ -248,10 +318,173 @@
     let repertorioAtual = [];
     let dragIndex = null;
 
-    // EXPRESSÃO REGULAR DE ACORDES ATUALIZADA:
-    // Suporta acordes entre parênteses opcionais, baixos com números (ex: F6/4) e extensões.
+    // EXPRESSÃO REGULAR DE ACORDES:
     const regexAcordeGlobal = /\(?[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/(?:[A-G][#b]?|\d+))?(?:º|°)?\*?\)?/g;                           
   
+    // ── MÓDULOS DE NOVAS FUNCIONALIDADES ────────────────────────────────
+
+    // 1. TAMANHO DA FONTE
+    let tamanhoFonteAtual = 16;
+
+    function alterarTamanhoFonte(delta) {
+        tamanhoFonteAtual = Math.max(10, Math.min(32, tamanhoFonteAtual + delta));
+        document.getElementById('visor-cifra').style.fontSize = `${tamanhoFonteAtual}px`;
+        document.getElementById('display-tamanho-fonte').innerText = `${tamanhoFonteAtual}px`;
+    }
+
+    // 2. AUTO-SCROLL
+    let scrollTimer = null;
+    let velocidadeScroll = 50; // Intervalo em ms (quanto menor, mais rápido)
+
+    function alternarAutoScroll() {
+        const btn = document.getElementById('btn-autoscroll-play');
+        if (scrollTimer) {
+            pararAutoScroll();
+        } else {
+            scrollTimer = setInterval(executarScroll, velocidadeScroll);
+            btn.innerText = "⏸ Pausar";
+            btn.style.background = "#c0392b";
+        }
+    }
+
+    function pararAutoScroll() {
+        if (scrollTimer) {
+            clearInterval(scrollTimer);
+            scrollTimer = null;
+            const btn = document.getElementById('btn-autoscroll-play');
+            if (btn) {
+                btn.innerText = "▶ Iniciar";
+                btn.style.background = "#27ae60";
+            }
+        }
+    }
+
+    function executarScroll() {
+        const painel = document.getElementById('painel-principal-conteudo');
+        const posAtual = painel.scrollTop;
+        painel.scrollTop += 1;
+
+        // Se chegou ao fim do scroll, para automaticamente
+        if (painel.scrollTop === posAtual && painel.scrollTop > 0) {
+            pararAutoScroll();
+        }
+    }
+
+    function alterarVelocidadeScroll(deltaMs) {
+        velocidadeScroll = Math.max(10, Math.min(150, velocidadeScroll + deltaMs));
+        
+        // Mapeia visualmente para uma escala simples de 1 a 10
+        const nivelVisual = Math.round((160 - velocidadeScroll) / 14);
+        document.getElementById('display-velocidade-scroll').innerText = `Vel: ${nivelVisual}`;
+
+        if (scrollTimer) {
+            pararAutoScroll();
+            alternarAutoScroll();
+        }
+    }
+
+    // 3. DICIONÁRIO VISUAL DE ACORDES (SVG Popover)
+    const bibliotecaAcordesSVG = {
+        "C":   { frets: [0, 3, 2, 0, 1, 0], base: 1 },
+        "C7":  { frets: [0, 3, 2, 3, 1, 0], base: 1 },
+        "Cm":  { frets: [-1, 3, 5, 5, 4, 3], base: 1, barre: { fret: 3, from: 1, to: 5 } },
+        "D":   { frets: [-1, -1, 0, 2, 3, 2], base: 1 },
+        "Dm":  { frets: [-1, -1, 0, 2, 3, 1], base: 1 },
+        "D7":  { frets: [-1, -1, 0, 2, 1, 2], base: 1 },
+        "E":   { frets: [0, 2, 2, 1, 0, 0], base: 1 },
+        "Em":  { frets: [0, 2, 2, 0, 0, 0], base: 1 },
+        "E7":  { frets: [0, 2, 0, 1, 0, 0], base: 1 },
+        "F":   { frets: [1, 3, 3, 2, 1, 1], base: 1, barre: { fret: 1, from: 1, to: 6 } },
+        "Fm":  { frets: [1, 3, 3, 1, 1, 1], base: 1, barre: { fret: 1, from: 1, to: 6 } },
+        "G":   { frets: [3, 2, 0, 0, 0, 3], base: 1 },
+        "G7":  { frets: [3, 2, 0, 0, 0, 1], base: 1 },
+        "Gm":  { frets: [3, 5, 5, 3, 3, 3], base: 1, barre: { fret: 3, from: 1, to: 6 } },
+        "A":   { frets: [0, 0, 2, 2, 2, 0], base: 1 },
+        "Am":  { frets: [0, 0, 2, 2, 1, 0], base: 1 },
+        "A7":  { frets: [0, 0, 2, 0, 2, 0], base: 1 },
+        "Bb":  { frets: [-1, 1, 3, 3, 3, 1], base: 1, barre: { fret: 1, from: 1, to: 5 } },
+        "B":   { frets: [-1, 2, 4, 4, 4, 2], base: 1, barre: { fret: 2, from: 1, to: 5 } },
+        "Bm":  { frets: [-1, 2, 4, 4, 3, 2], base: 1, barre: { fret: 2, from: 1, to: 5 } }
+    };
+
+    function gerarSVGAcorde(nomeAcorde) {
+        // Limpa parênteses e barras para busca no dicionário
+        const nomeLimpo = nomeAcorde.replace(/[\(\)]/g, '').split('/')[0].trim();
+        const dados = bibliotecaAcordesSVG[nomeLimpo];
+
+        if (!dados) {
+            return `<div style="font-size:11px; color:#888; padding:10px;">Diagrama indisponível para ${nomeAcorde}</div>`;
+        }
+
+        const width = 110;
+        const height = 120;
+        let svg = `<svg width="${width}" height="${height}" viewBox="0 0 110 120" xmlns="http://www.w3.org/2000/svg">`;
+        
+        // Desenho das 5 casas (linhas horizontais)
+        for (let i = 0; i <= 4; i++) {
+            const y = 25 + i * 20;
+            const strokeWidth = (i === 0 && dados.base === 1) ? 4 : 1;
+            svg += `<line x1="20" y1="${y}" x2="90" y2="${y}" stroke="#333" stroke-width="${strokeWidth}"/>`;
+        }
+
+        // Desenho das 6 cordas (linhas verticais)
+        for (let i = 0; i < 6; i++) {
+            const x = 20 + i * 14;
+            svg += `<line x1="${x}" y1="25" x2="${x}" y2="105" stroke="#666" stroke-width="1"/>`;
+        }
+
+        // Pestana (se existir)
+        if (dados.barre) {
+            const y = 25 + (dados.barre.fret - dados.base) * 20 + 10;
+            const x1 = 20 + (dados.barre.from - 1) * 14;
+            const x2 = 20 + (dados.barre.to - 1) * 14;
+            svg += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#e74c3c" stroke-width="8" stroke-linecap="round"/>`;
+        }
+
+        // Marcadores das cordas (Dedos / X / O)
+        dados.frets.forEach((fret, stringIdx) => {
+            const x = 20 + stringIdx * 14;
+
+            if (fret === -1) {
+                // Corda não tocada (X)
+                svg += `<text x="${x}" y="15" font-size="11" text-anchor="middle" fill="#c0392b" font-weight="bold">✕</text>`;
+            } else if (fret === 0) {
+                // Corda solta (O)
+                svg += `<circle cx="${x}" cy="12" r="3.5" stroke="#27ae60" stroke-width="1.5" fill="none"/>`;
+            } else {
+                // Posição do dedo
+                const y = 25 + (fret - dados.base) * 20 + 10;
+                svg += `<circle cx="${x}" cy="${y}" r="5.5" fill="#e74c3c"/>`;
+            }
+        });
+
+        svg += `</svg>`;
+        return svg;
+    }
+
+    function vincularEventosPopover() {
+        const popover = document.getElementById('popover-acorde');
+        const titulo = document.getElementById('popover-nome-acorde');
+        const containerSVG = document.getElementById('popover-svg-container');
+
+        document.querySelectorAll('.acorde').forEach(el => {
+            el.addEventListener('mouseenter', (e) => {
+                const nomeAcorde = el.innerText.trim();
+                titulo.innerText = nomeAcorde;
+                containerSVG.innerHTML = gerarSVGAcorde(nomeAcorde);
+
+                const rect = el.getBoundingClientRect();
+                popover.style.top = `${rect.top + window.scrollY - 140}px`;
+                popover.style.left = `${rect.left + window.scrollX - 25}px`;
+                popover.style.display = 'block';
+            });
+
+            el.addEventListener('mouseleave', () => {
+                popover.style.display = 'none';
+            });
+        });
+    }
+
     // ── MÓDULO GITHUB ──────────────────────────────────────────────────
 
     function normalizarNomeArquivo(titulo) {
@@ -795,7 +1028,6 @@
         atualizarDestaquesCalendario();
     }
 
-    // FUNÇÃO CORRIGIDA: Reconhecimento de acordes entre parênteses e baixos numéricos
     function formatarTextoCifra(textoBruto) {
         const temp = document.createElement('div');
         temp.innerHTML = textoBruto;
@@ -814,10 +1046,7 @@
             let qtdPalavrasTexto = 0;
 
             palavrasSemNumeros.forEach(palavra => {
-                // Remove pontuações de final de frase mantendo parênteses
                 const limpa = palavra.replace(/[\,\.\:\!\?\[\]]/g, '');
-                
-                // Regra atualizada: aceita parênteses em volta do acorde inteiro e baixos com números (ex: F6/4 ou (C7))
                 const ehAcorde = /^\(?[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/(?:[A-G][#b]?|\d+))?(?:º|°)?\*?\)?$/.test(limpa);
                 
                 if (ehAcorde) {
@@ -827,12 +1056,10 @@
                 }
             });
 
-            // Se existirem palavras que são texto comum na linha, não a considerarmos linha de cifras pura
             if (qtdPalavrasTexto > 0) {
                 return linha;
             }
 
-            // Destaca os acordes encontrados mantendo os parênteses
             return linha.replace(regexAcordeGlobal, '<b style="color: #e74c3c;">$&</b>');
         }).join('\n');
     }
@@ -1135,6 +1362,8 @@
     }
 
     function exibir(nome) {
+        pararAutoScroll(); // Para o scroll anterior se houver troca de música
+        
         const tituloElemento = document.getElementById('titulo-musica');
         const playerContainer = document.getElementById('player-embed-container');
         const visor = document.getElementById('visor-cifra');
@@ -1154,6 +1383,9 @@
 
         const textoProcessado = formatarTextoCifra(m.texto);
         visor.innerHTML = textoProcessado.replace(/<b style="color: #e74c3c;">(.*?)<\/b>/g, '<span class="acorde">$1</span>');
+        
+        // Ativa os eventos do Dicionário de Acordes nos elementos criados
+        vincularEventosPopover();
     }
 
     function abrirModal(edit = false, id = '') {
