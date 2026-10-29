@@ -83,7 +83,7 @@
 
         #visor-cifra { white-space: pre-wrap; word-break: break-word; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 16px; line-height: 1.5; color: #000; position: relative; }
         
-        /* ESTILO DOS ACORDES DESTACADOS */
+        /* Estilo dos Acordes Destacados em Vermelho */
         .acorde { 
             color: #e74c3c !important; 
             font-weight: bold; 
@@ -330,7 +330,7 @@
     let repertorioAtual = [];
     let dragIndex = null;
 
-    // REGEX DE DETECÇÃO DE ACORDES
+    // REGEX DE DETECÇÃO DE ACORDES (Robusta)
     const regexAcordeGlobal = /\(?[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/(?:[A-G][#b]?|\d+))?(?:º|°)?\*?\)?/g;                           
   
     // 1. TAMANHO DA FONTE
@@ -1038,7 +1038,7 @@
         atualizarDestaquesCalendario();
     }
 
-    // FUNÇÃO REVISADA: Aplica a tag <span class="acorde"> diretamente
+    // FUNÇÃO CORRIGIDA: Identifica linhas de cifra por proporção de termos
     function formatarTextoCifra(textoBruto) {
         const temp = document.createElement('div');
         temp.innerHTML = textoBruto;
@@ -1048,29 +1048,39 @@
             const linhaTrim = linha.trim();
             if (!linhaTrim) return linha;
 
+            // Divide a linha em termos individuais por espaços
             const palavras = linhaTrim.split(/\s+/);
-            const palavrasSemNumeros = palavras.filter(p => !/^\d+[\.\)]?$/.test(p));
+            
+            // Ignora pontuações puras ou números de contagem
+            const palavrasValidas = palavras.filter(p => !/^\d+[\.\)]?$/.test(p));
 
-            if (palavrasSemNumeros.length === 0) return linha;
+            if (palavrasValidas.length === 0) return linha;
 
             let qtdAcordes = 0;
             let qtdPalavrasTexto = 0;
 
-            palavrasSemNumeros.forEach(palavra => {
+            palavrasValidas.forEach(palavra => {
+                // Remove pontuações de borda para testar o acorde puramente
                 const limpa = palavra.replace(/[\,\.\:\!\?\[\]]/g, '');
+                
                 const ehAcorde = /^\(?[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/(?:[A-G][#b]?|\d+))?(?:º|°)?\*?\)?$/.test(limpa);
                 
                 if (ehAcorde) {
                     qtdAcordes++;
-                } else if (limpa.length >= 2) {
-                    qtdPalavrasTexto++;
+                } else {
+                    // Palavras com 3 ou mais letras (ou palavras com pontuações do texto) são consideradas texto real da letra
+                    if (limpa.length >= 3 || /[\.\,\!\?]/.test(palavra)) {
+                        qtdPalavrasTexto++;
+                    }
                 }
             });
 
-            if (qtdPalavrasTexto > 0) {
+            // Se existirem mais palavras de texto do que acordes na linha, mantém o texto em preto
+            if (qtdPalavrasTexto > 0 && qtdPalavrasTexto >= qtdAcordes) {
                 return linha;
             }
 
+            // Aplica o destaque vermelho em todos os acordes reconhecidos da linha
             return linha.replace(regexAcordeGlobal, '<span class="acorde">$&</span>');
         }).join('\n');
     }
@@ -1372,7 +1382,6 @@
         });
     }
 
-    // FUNÇÃO REVISADA: renderiza o visor da cifra
     function exibir(nome) {
         pararAutoScroll();
         
