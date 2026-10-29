@@ -49,7 +49,7 @@
         .controles-ordem { display: flex; gap: 4px; align-items: center; }
         .btn-ordem { background: #1a252f; color: white; border: 1px solid #555; border-radius: 3px; cursor: pointer; padding: 2px 6px; font-size: 11px; }
 
-        /* Área Principal de Conteúdo - Ajustado para Scroll Eficiente */
+        /* Área Principal de Conteúdo */
         .main-content { 
             flex: 1; 
             padding: 20px; 
@@ -82,8 +82,10 @@
         .grupo-label { font-size: 12px; font-weight: bold; color: #7f8c8d; margin-right: 5px; }
 
         #visor-cifra { white-space: pre-wrap; word-break: break-word; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 16px; line-height: 1.5; color: #000; position: relative; }
+        
+        /* ESTILO DOS ACORDES DESTACADOS */
         .acorde { 
-            color: #e74c3c; 
+            color: #e74c3c !important; 
             font-weight: bold; 
             background: #fdf2f2; 
             border-radius: 3px; 
@@ -328,12 +330,9 @@
     let repertorioAtual = [];
     let dragIndex = null;
 
-    // REGEX ATUALIZADA DE ACORDES:
-    // Suporta notas com #/b, variações m/M/maj/dim/aug/sus/add, números (ex: E4, C#m7), parênteses e baixos com #/b (ex: F#m7/E, E/G#)
+    // REGEX DE DETECÇÃO DE ACORDES
     const regexAcordeGlobal = /\(?[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/(?:[A-G][#b]?|\d+))?(?:º|°)?\*?\)?/g;                           
   
-    // ── MÓDULOS DE NOVAS FUNCIONALIDADES ────────────────────────────────
-
     // 1. TAMANHO DA FONTE
     let tamanhoFonteAtual = 16;
 
@@ -1039,7 +1038,7 @@
         atualizarDestaquesCalendario();
     }
 
-    // FUNÇÃO CORRIGIDA: Identifica e formata todas as linhas de acordes
+    // FUNÇÃO REVISADA: Aplica a tag <span class="acorde"> diretamente
     function formatarTextoCifra(textoBruto) {
         const temp = document.createElement('div');
         temp.innerHTML = textoBruto;
@@ -1059,24 +1058,20 @@
 
             palavrasSemNumeros.forEach(palavra => {
                 const limpa = palavra.replace(/[\,\.\:\!\?\[\]]/g, '');
-                
-                // Valida se a palavra segue a estrutura de acorde musical
                 const ehAcorde = /^\(?[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/(?:[A-G][#b]?|\d+))?(?:º|°)?\*?\)?$/.test(limpa);
                 
                 if (ehAcorde) {
                     qtdAcordes++;
-                } else if (limpa.length >= 2 || !/^[A-G]$/.test(limpa)) {
+                } else if (limpa.length >= 2) {
                     qtdPalavrasTexto++;
                 }
             });
 
-            // Se for identificada como uma linha de letras/texto comum, mantém sem alterações
             if (qtdPalavrasTexto > 0) {
                 return linha;
             }
 
-            // Se for uma linha de cifras, substitui e destaca todos os acordes
-            return linha.replace(regexAcordeGlobal, '<b style="color: #e74c3c;">$&</b>');
+            return linha.replace(regexAcordeGlobal, '<span class="acorde">$&</span>');
         }).join('\n');
     }
 
@@ -1377,6 +1372,7 @@
         });
     }
 
+    // FUNÇÃO REVISADA: renderiza o visor da cifra
     function exibir(nome) {
         pararAutoScroll();
         
@@ -1398,7 +1394,7 @@
         }
 
         const textoProcessado = formatarTextoCifra(m.texto);
-        visor.innerHTML = textoProcessado.replace(/<b style="color: #e74c3c;">(.*?)<\/b>/g, '<span class="acorde">$1</span>');
+        visor.innerHTML = textoProcessado;
         
         vincularEventosPopover();
     }
