@@ -49,8 +49,18 @@
         .controles-ordem { display: flex; gap: 4px; align-items: center; }
         .btn-ordem { background: #1a252f; color: white; border: 1px solid #555; border-radius: 3px; cursor: pointer; padding: 2px 6px; font-size: 11px; }
 
-        /* Área Principal de Conteúdo */
-        .main-content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; position: relative; scroll-behavior: smooth; }
+        /* Área Principal de Conteúdo - Ajustado para Scroll Eficiente */
+        .main-content { 
+            flex: 1; 
+            padding: 20px; 
+            overflow-y: auto; 
+            height: 100vh;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            box-sizing: border-box; 
+            position: relative; 
+        }
         .container { width: 100%; max-width: 950px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); box-sizing: border-box; }
 
         .header-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 25px; border-bottom: 2px solid #f0f2f5; padding-bottom: 20px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -150,7 +160,7 @@
         @media screen and (max-width: 900px) {
             body { flex-direction: column; overflow-y: auto; height: auto; }
             .sidebar { width: 100%; max-height: 280px; border-right: none; border-bottom: 5px solid #1a252f; padding: 10px; }
-            .main-content { padding: 10px; width: 100%; }
+            .main-content { padding: 10px; width: 100%; height: auto; overflow-y: visible; }
             .container { padding: 15px; border-radius: 8px; }
             .header-flex { flex-direction: column; align-items: center; gap: 15px; }
             #player-embed-container { width: 100%; max-width: 320px; }
@@ -318,7 +328,8 @@
     let repertorioAtual = [];
     let dragIndex = null;
 
-    // EXPRESSÃO REGULAR DE ACORDES:
+    // REGEX ATUALIZADA DE ACORDES:
+    // Suporta notas com #/b, variações m/M/maj/dim/aug/sus/add, números (ex: E4, C#m7), parênteses e baixos com #/b (ex: F#m7/E, E/G#)
     const regexAcordeGlobal = /\(?[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/(?:[A-G][#b]?|\d+))?(?:º|°)?\*?\)?/g;                           
   
     // ── MÓDULOS DE NOVAS FUNCIONALIDADES ────────────────────────────────
@@ -334,7 +345,7 @@
 
     // 2. AUTO-SCROLL
     let scrollTimer = null;
-    let velocidadeScroll = 50; // Intervalo em ms (quanto menor, mais rápido)
+    let velocidadeScroll = 50;
 
     function alternarAutoScroll() {
         const btn = document.getElementById('btn-autoscroll-play');
@@ -361,11 +372,16 @@
 
     function executarScroll() {
         const painel = document.getElementById('painel-principal-conteudo');
-        const posAtual = painel.scrollTop;
-        painel.scrollTop += 1;
+        const posAnteriorPanel = painel.scrollTop;
+        const posAnteriorWindow = window.scrollY;
 
-        // Se chegou ao fim do scroll, para automaticamente
-        if (painel.scrollTop === posAtual && painel.scrollTop > 0) {
+        painel.scrollBy(0, 1);
+        window.scrollBy(0, 1);
+
+        const panelChegouAoFim = (painel.scrollTop === posAnteriorPanel && painel.scrollTop > 0);
+        const windowChegouAoFim = (window.innerHeight + window.scrollY) >= document.body.offsetHeight;
+
+        if (panelChegouAoFim || windowChegouAoFim) {
             pararAutoScroll();
         }
     }
@@ -373,7 +389,6 @@
     function alterarVelocidadeScroll(deltaMs) {
         velocidadeScroll = Math.max(10, Math.min(150, velocidadeScroll + deltaMs));
         
-        // Mapeia visualmente para uma escala simples de 1 a 10
         const nivelVisual = Math.round((160 - velocidadeScroll) / 14);
         document.getElementById('display-velocidade-scroll').innerText = `Vel: ${nivelVisual}`;
 
@@ -387,14 +402,18 @@
     const bibliotecaAcordesSVG = {
         "C":   { frets: [0, 3, 2, 0, 1, 0], base: 1 },
         "C7":  { frets: [0, 3, 2, 3, 1, 0], base: 1 },
+        "C#m7":{ frets: [-1, 4, 6, 4, 5, 4], base: 4, barre: { fret: 4, from: 1, to: 5 } },
         "Cm":  { frets: [-1, 3, 5, 5, 4, 3], base: 1, barre: { fret: 3, from: 1, to: 5 } },
         "D":   { frets: [-1, -1, 0, 2, 3, 2], base: 1 },
         "Dm":  { frets: [-1, -1, 0, 2, 3, 1], base: 1 },
         "D7":  { frets: [-1, -1, 0, 2, 1, 2], base: 1 },
         "E":   { frets: [0, 2, 2, 1, 0, 0], base: 1 },
+        "E4":  { frets: [0, 2, 2, 2, 0, 0], base: 1 },
         "Em":  { frets: [0, 2, 2, 0, 0, 0], base: 1 },
         "E7":  { frets: [0, 2, 0, 1, 0, 0], base: 1 },
         "F":   { frets: [1, 3, 3, 2, 1, 1], base: 1, barre: { fret: 1, from: 1, to: 6 } },
+        "F#m": { frets: [2, 4, 4, 2, 2, 2], base: 2, barre: { fret: 2, from: 1, to: 6 } },
+        "F#m7":{ frets: [2, 4, 2, 2, 2, 2], base: 2, barre: { fret: 2, from: 1, to: 6 } },
         "Fm":  { frets: [1, 3, 3, 1, 1, 1], base: 1, barre: { fret: 1, from: 1, to: 6 } },
         "G":   { frets: [3, 2, 0, 0, 0, 3], base: 1 },
         "G7":  { frets: [3, 2, 0, 0, 0, 1], base: 1 },
@@ -408,7 +427,6 @@
     };
 
     function gerarSVGAcorde(nomeAcorde) {
-        // Limpa parênteses e barras para busca no dicionário
         const nomeLimpo = nomeAcorde.replace(/[\(\)]/g, '').split('/')[0].trim();
         const dados = bibliotecaAcordesSVG[nomeLimpo];
 
@@ -420,20 +438,17 @@
         const height = 120;
         let svg = `<svg width="${width}" height="${height}" viewBox="0 0 110 120" xmlns="http://www.w3.org/2000/svg">`;
         
-        // Desenho das 5 casas (linhas horizontais)
         for (let i = 0; i <= 4; i++) {
             const y = 25 + i * 20;
             const strokeWidth = (i === 0 && dados.base === 1) ? 4 : 1;
             svg += `<line x1="20" y1="${y}" x2="90" y2="${y}" stroke="#333" stroke-width="${strokeWidth}"/>`;
         }
 
-        // Desenho das 6 cordas (linhas verticais)
         for (let i = 0; i < 6; i++) {
             const x = 20 + i * 14;
             svg += `<line x1="${x}" y1="25" x2="${x}" y2="105" stroke="#666" stroke-width="1"/>`;
         }
 
-        // Pestana (se existir)
         if (dados.barre) {
             const y = 25 + (dados.barre.fret - dados.base) * 20 + 10;
             const x1 = 20 + (dados.barre.from - 1) * 14;
@@ -441,18 +456,14 @@
             svg += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#e74c3c" stroke-width="8" stroke-linecap="round"/>`;
         }
 
-        // Marcadores das cordas (Dedos / X / O)
         dados.frets.forEach((fret, stringIdx) => {
             const x = 20 + stringIdx * 14;
 
             if (fret === -1) {
-                // Corda não tocada (X)
                 svg += `<text x="${x}" y="15" font-size="11" text-anchor="middle" fill="#c0392b" font-weight="bold">✕</text>`;
             } else if (fret === 0) {
-                // Corda solta (O)
                 svg += `<circle cx="${x}" cy="12" r="3.5" stroke="#27ae60" stroke-width="1.5" fill="none"/>`;
             } else {
-                // Posição do dedo
                 const y = 25 + (fret - dados.base) * 20 + 10;
                 svg += `<circle cx="${x}" cy="${y}" r="5.5" fill="#e74c3c"/>`;
             }
@@ -891,7 +902,7 @@
         }
     }
 
-    // ── LÓGICA EXISTENTE DO SISTEMA ───────────────────────────────
+    // ── LÓGICA DE PROCESSAMENTO E FORMATO DE CIFRAS ──────────────────
     function atualizarDataDisplay() {
         const dataVal = document.getElementById('data-selecionada').value;
         if(!dataVal) return;
@@ -1028,6 +1039,7 @@
         atualizarDestaquesCalendario();
     }
 
+    // FUNÇÃO CORRIGIDA: Identifica e formata todas as linhas de acordes
     function formatarTextoCifra(textoBruto) {
         const temp = document.createElement('div');
         temp.innerHTML = textoBruto;
@@ -1047,6 +1059,8 @@
 
             palavrasSemNumeros.forEach(palavra => {
                 const limpa = palavra.replace(/[\,\.\:\!\?\[\]]/g, '');
+                
+                // Valida se a palavra segue a estrutura de acorde musical
                 const ehAcorde = /^\(?[A-G][#b]?(?:m|M|maj|dim|aug|sus|add|º|°)?\d{0,2}(?:M|maj)?(?:[+-]|#|b)?(?:\([^)]+\))?(?:\/(?:[A-G][#b]?|\d+))?(?:º|°)?\*?\)?$/.test(limpa);
                 
                 if (ehAcorde) {
@@ -1056,10 +1070,12 @@
                 }
             });
 
+            // Se for identificada como uma linha de letras/texto comum, mantém sem alterações
             if (qtdPalavrasTexto > 0) {
                 return linha;
             }
 
+            // Se for uma linha de cifras, substitui e destaca todos os acordes
             return linha.replace(regexAcordeGlobal, '<b style="color: #e74c3c;">$&</b>');
         }).join('\n');
     }
@@ -1362,7 +1378,7 @@
     }
 
     function exibir(nome) {
-        pararAutoScroll(); // Para o scroll anterior se houver troca de música
+        pararAutoScroll();
         
         const tituloElemento = document.getElementById('titulo-musica');
         const playerContainer = document.getElementById('player-embed-container');
@@ -1384,7 +1400,6 @@
         const textoProcessado = formatarTextoCifra(m.texto);
         visor.innerHTML = textoProcessado.replace(/<b style="color: #e74c3c;">(.*?)<\/b>/g, '<span class="acorde">$1</span>');
         
-        // Ativa os eventos do Dicionário de Acordes nos elementos criados
         vincularEventosPopover();
     }
 
